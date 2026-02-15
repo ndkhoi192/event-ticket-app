@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home } from "lucide-react-native";
+import { Home, User } from "lucide-react-native";
 
 export default function AttendeeLayout() {
     return (
@@ -9,6 +9,13 @@ export default function AttendeeLayout() {
                 options={{
                     title: "Home",
                     tabBarIcon: ({ color }) => <Home color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: "Profile",
+                    tabBarIcon: ({ color }) => <User color={color} />,
                 }}
             />
         </Tabs>

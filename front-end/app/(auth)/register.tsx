@@ -1,4 +1,3 @@
-import clsx from "clsx";
 import { Link, useRouter } from "expo-router";
 import { Lock, Mail, User } from "lucide-react-native";
 import React, { useState } from "react";
@@ -31,11 +30,10 @@ export default function RegisterScreen() {
         setIsSubmitting(true);
         try {
             await register(fullName, email, password, role);
-            // Assuming successful registration logs the user in
             if (role === 'organizer') {
-                router.replace("/(organizer)");
+                router.replace("/(organizer)/dashboard");
             } else {
-                router.replace("/(attendee)");
+                router.replace("/(attendee)/home");
             }
         } catch (error: any) {
             Alert.alert("Registration Failed", error.response?.data?.message || "Something went wrong");
@@ -55,16 +53,18 @@ export default function RegisterScreen() {
                 {/* Role Selection */}
                 <View className="flex-row bg-gray-100 rounded-full p-1 mb-2">
                     <TouchableOpacity
-                        className={clsx("flex-1 py-2 rounded-full items-center", role === "attendee" ? "bg-white shadow-sm" : "")}
+                        className="flex-1 py-2 rounded-full items-center"
+                        style={role === "attendee" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
                         onPress={() => setRole("attendee")}
                     >
-                        <Text className={clsx("font-semibold", role === "attendee" ? "text-pastel-blue" : "text-gray-500")}>Attendee</Text>
+                        <Text className="font-semibold" style={{ color: role === "attendee" ? "#A7C7E7" : "#6B7280" }}>Attendee</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        className={clsx("flex-1 py-2 rounded-full items-center", role === "organizer" ? "bg-white shadow-sm" : "")}
+                        className="flex-1 py-2 rounded-full items-center"
+                        style={role === "organizer" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
                         onPress={() => setRole("organizer")}
                     >
-                        <Text className={clsx("font-semibold", role === "organizer" ? "text-pastel-pink" : "text-gray-500")}>Organizer</Text>
+                        <Text className="font-semibold" style={{ color: role === "organizer" ? "#FAA0A0" : "#6B7280" }}>Organizer</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -118,7 +118,7 @@ export default function RegisterScreen() {
 
                 <View className="flex-row justify-center mt-6">
                     <Text className="text-gray-500">Already have an account? </Text>
-                    <Link href="/login" asChild>
+                    <Link href="/(auth)/login" asChild>
                         <TouchableOpacity>
                             <Text className="text-pastel-blue font-bold">Sign In</Text>
                         </TouchableOpacity>
