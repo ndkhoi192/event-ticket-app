@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
@@ -43,88 +46,96 @@ export default function RegisterScreen() {
     };
 
     return (
-        <View className="flex-1 bg-white justify-center px-6">
-            <View className="items-center mb-8">
-                <Text className="text-3xl font-bold text-pastel-pink mb-2">Create Account</Text>
-                <Text className="text-gray-500 text-base">Join us and start exploring!</Text>
-            </View>
-
-            <View className="space-y-4">
-                {/* Role Selection */}
-                <View className="flex-row bg-gray-100 rounded-full p-1 mb-2">
-                    <TouchableOpacity
-                        className="flex-1 py-2 rounded-full items-center"
-                        style={role === "attendee" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
-                        onPress={() => setRole("attendee")}
-                    >
-                        <Text className="font-semibold" style={{ color: role === "attendee" ? "#A7C7E7" : "#6B7280" }}>Attendee</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className="flex-1 py-2 rounded-full items-center"
-                        style={role === "organizer" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
-                        onPress={() => setRole("organizer")}
-                    >
-                        <Text className="font-semibold" style={{ color: role === "organizer" ? "#FAA0A0" : "#6B7280" }}>Organizer</Text>
-                    </TouchableOpacity>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            className="flex-1 bg-white"
+        >
+            <ScrollView
+                contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingBottom: 40 }}
+                showsVerticalScrollIndicator={false}
+            >
+                <View className="items-center mb-8">
+                    <Text className="text-3xl font-bold text-pastel-pink mb-2">Create Account</Text>
+                    <Text className="text-gray-500 text-base">Join us and start exploring!</Text>
                 </View>
 
-                <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
-                    <User color="#9CA3AF" size={20} />
-                    <TextInput
-                        className="flex-1 ml-3 text-gray-700"
-                        placeholder="Full Name"
-                        placeholderTextColor="#9CA3AF"
-                        value={fullName}
-                        onChangeText={setFullName}
-                    />
-                </View>
-
-                <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
-                    <Mail color="#9CA3AF" size={20} />
-                    <TextInput
-                        className="flex-1 ml-3 text-gray-700"
-                        placeholder="Email Address"
-                        placeholderTextColor="#9CA3AF"
-                        value={email}
-                        onChangeText={setEmail}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                    />
-                </View>
-
-                <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-pink">
-                    <Lock color="#9CA3AF" size={20} />
-                    <TextInput
-                        className="flex-1 ml-3 text-gray-700"
-                        placeholder="Password"
-                        placeholderTextColor="#9CA3AF"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                    />
-                </View>
-
-                <TouchableOpacity
-                    className="bg-pastel-pink rounded-full py-4 items-center shadow-md active:opacity-90 mt-4"
-                    onPress={handleRegister}
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? (
-                        <ActivityIndicator color="white" />
-                    ) : (
-                        <Text className="text-white font-bold text-lg">Sign Up</Text>
-                    )}
-                </TouchableOpacity>
-
-                <View className="flex-row justify-center mt-6">
-                    <Text className="text-gray-500">Already have an account? </Text>
-                    <Link href="/(auth)/login" asChild>
-                        <TouchableOpacity>
-                            <Text className="text-pastel-blue font-bold">Sign In</Text>
+                <View className="space-y-4">
+                    {/* Role Selection */}
+                    <View className="flex-row bg-gray-100 rounded-full p-1 mb-2">
+                        <TouchableOpacity
+                            className="flex-1 py-2 rounded-full items-center"
+                            style={role === "attendee" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
+                            onPress={() => setRole("attendee")}
+                        >
+                            <Text className="font-semibold" style={{ color: role === "attendee" ? "#A7C7E7" : "#6B7280" }}>Attendee</Text>
                         </TouchableOpacity>
-                    </Link>
+                        <TouchableOpacity
+                            className="flex-1 py-2 rounded-full items-center"
+                            style={role === "organizer" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
+                            onPress={() => setRole("organizer")}
+                        >
+                            <Text className="font-semibold" style={{ color: role === "organizer" ? "#FAA0A0" : "#6B7280" }}>Organizer</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
+                        <User color="#9CA3AF" size={20} />
+                        <TextInput
+                            className="flex-1 ml-3 text-gray-700"
+                            placeholder="Full Name"
+                            placeholderTextColor="#9CA3AF"
+                            value={fullName}
+                            onChangeText={setFullName}
+                        />
+                    </View>
+
+                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
+                        <Mail color="#9CA3AF" size={20} />
+                        <TextInput
+                            className="flex-1 ml-3 text-gray-700"
+                            placeholder="Email Address"
+                            placeholderTextColor="#9CA3AF"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
+                    </View>
+
+                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-pink">
+                        <Lock color="#9CA3AF" size={20} />
+                        <TextInput
+                            className="flex-1 ml-3 text-gray-700"
+                            placeholder="Password"
+                            placeholderTextColor="#9CA3AF"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                        />
+                    </View>
+
+                    <TouchableOpacity
+                        className="bg-pastel-pink rounded-full py-4 items-center shadow-md active:opacity-90 mt-4"
+                        onPress={handleRegister}
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text className="text-white font-bold text-lg">Sign Up</Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <View className="flex-row justify-center mt-6">
+                        <Text className="text-gray-500">Already have an account? </Text>
+                        <Link href="/(auth)/login" asChild>
+                            <TouchableOpacity>
+                                <Text className="text-pastel-blue font-bold">Sign In</Text>
+                            </TouchableOpacity>
+                        </Link>
+                    </View>
                 </View>
-            </View>
-        </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }

@@ -21,7 +21,7 @@ const getApiUrl = () => {
     return url;
 };
 
-const API_URL = getApiUrl();
+export const API_URL = getApiUrl();
 
 interface User {
     _id: string;
