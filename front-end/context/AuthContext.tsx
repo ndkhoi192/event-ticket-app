@@ -4,11 +4,20 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 const getApiUrl = () => {
-    let url = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3002/api";
-    // Android emulator cannot access 'localhost' directly; it must use '10.0.2.2'
-    if (Platform.OS === "android" && url.includes("localhost")) {
-        url = url.replace("localhost", "10.0.2.2");
+    let url = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.19:3002/api";
+    console.log("Initial API URL:", url);
+
+    // Handle localhost on Native platforms
+    if (Platform.OS !== "web" && url.includes("localhost")) {
+        if (Platform.OS === "android") {
+            url = url.replace("localhost", "10.0.2.2");
+        } else {
+            // For iOS physical device or simulator wanting to hit host
+            url = url.replace("localhost", "192.168.1.19");
+        }
     }
+
+    console.log("Resolved API URL:", url);
     return url;
 };
 
