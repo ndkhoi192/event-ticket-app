@@ -36,5 +36,5 @@ export interface Event {
     location: Location;
     ticket_types: TicketType[];
     add_ons: AddOn[];
-    status: 'draft' | 'published' | 'cancelled';
+    status: 'draft' | 'published' | 'cancelled' | 'ended';
 }

@@ -4,6 +4,22 @@ const Category = require('../models/Category');
 // Create a new event
 exports.createEvent = async (req, res) => {
     try {
+        // Parse JSON fields if they are strings (from FormData)
+        if (typeof req.body.location === 'string') {
+            req.body.location = JSON.parse(req.body.location);
+        }
+        if (typeof req.body.ticket_types === 'string') {
+            req.body.ticket_types = JSON.parse(req.body.ticket_types);
+        }
+
+        // Handle file upload
+        if (req.file) {
+            // Store relative path (e.g., "uploads/filename.jpg") so client can construct full URL
+            // or backend can dynamically prepend host
+            const bannerUrl = `uploads/${req.file.filename}`;
+            req.body.banner_url = bannerUrl;
+        }
+
         // Validate category exists
         if (req.body.category_id) {
             const category = await Category.findById(req.body.category_id);
@@ -16,8 +32,8 @@ exports.createEvent = async (req, res) => {
         if (req.body.ticket_types && Array.isArray(req.body.ticket_types)) {
             req.body.ticket_types = req.body.ticket_types.map(ticket => ({
                 ...ticket,
-                remaining_quantity: ticket.remaining_quantity !== undefined 
-                    ? ticket.remaining_quantity 
+                remaining_quantity: ticket.remaining_quantity !== undefined
+                    ? ticket.remaining_quantity
                     : ticket.total_quantity
             }));
         }
@@ -26,15 +42,20 @@ exports.createEvent = async (req, res) => {
             ...req.body,
             organizer_id: req.user._id // Set from auth middleware
         };
-        
+
         const newEvent = new Event(eventData);
         const savedEvent = await newEvent.save();
-        
+
         // Populate category and organizer details before sending response
         await savedEvent.populate('organizer_id', 'full_name email');
         await savedEvent.populate('category_id', 'name icon_url');
-        
-        res.status(201).json(savedEvent);
+
+        const savedEventObj = savedEvent.toObject();
+        if (savedEventObj.banner_url && !savedEventObj.banner_url.startsWith('http')) {
+            savedEventObj.banner_url = `${req.protocol}://${req.get('host')}/${savedEventObj.banner_url}`;
+        }
+
+        res.status(201).json(savedEventObj);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -65,7 +86,16 @@ exports.getAllEvents = async (req, res) => {
         const events = await Event.find(query)
             .populate('organizer_id', 'full_name email')
             .populate('category_id', 'name');
-        res.status(200).json(events);
+
+        const eventsWithUrl = events.map(event => {
+            const eventObj = event.toObject();
+            if (eventObj.banner_url && !eventObj.banner_url.startsWith('http')) {
+                eventObj.banner_url = `${req.protocol}://${req.get('host')}/${eventObj.banner_url}`;
+            }
+            return eventObj;
+        });
+
+        res.status(200).json(eventsWithUrl);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -80,7 +110,12 @@ exports.getEventById = async (req, res) => {
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
-        res.status(200).json(event);
+        // Convert to object and append full URL to banner_url if relative
+        const eventObj = event.toObject();
+        if (eventObj.banner_url && !eventObj.banner_url.startsWith('http')) {
+            eventObj.banner_url = `${req.protocol}://${req.get('host')}/${eventObj.banner_url}`;
+        }
+        res.status(200).json(eventObj);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -105,13 +140,18 @@ exports.updateEvent = async (req, res) => {
             { $set: req.body },
             { new: true }
         );
-        res.status(200).json(updatedEvent);
+        // Convert to object and append full URL to banner_url if relative
+        const eventObj = updatedEvent.toObject();
+        if (eventObj.banner_url && !eventObj.banner_url.startsWith('http')) {
+            eventObj.banner_url = `${req.protocol}://${req.get('host')}/${eventObj.banner_url}`;
+        }
+        res.status(200).json(eventObj);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// Delete an event
+// Cancel an event (soft delete)
 exports.deleteEvent = async (req, res) => {
     try {
         const event = await Event.findById(req.params.id);
@@ -122,11 +162,20 @@ exports.deleteEvent = async (req, res) => {
 
         // Check ownership or admin
         if (event.organizer_id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.status(403).json({ message: 'Not authorized to delete this event' });
+            return res.status(403).json({ message: 'Not authorized to cancel this event' });
         }
 
-        await Event.findByIdAndDelete(req.params.id);
-        res.status(200).json({ message: 'Event has been deleted' });
+        // Update status to cancelled instead of deleting
+        const cancelledEvent = await Event.findByIdAndUpdate(
+            req.params.id,
+            { $set: { status: 'cancelled' } },
+            { new: true }
+        );
+
+        res.status(200).json({ 
+            message: 'Event has been cancelled',
+            event: cancelledEvent
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -138,7 +187,14 @@ exports.getMyEvents = async (req, res) => {
         const events = await Event.find({ organizer_id: req.user._id });
         console.log(events);
         console.log(req);
-        res.json(events);
+        const eventsWithUrl = events.map(event => {
+            const eventObj = event.toObject();
+            if (eventObj.banner_url && !eventObj.banner_url.startsWith('http')) {
+                eventObj.banner_url = `${req.protocol}://${req.get('host')}/${eventObj.banner_url}`;
+            }
+            return eventObj;
+        });
+        res.json(eventsWithUrl);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

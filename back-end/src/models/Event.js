@@ -73,7 +73,7 @@ const eventSchema = new mongoose.Schema({
     }],
     status: {
         type: String,
-        enum: ['published', 'cancelled', 'ended'],
+        enum: ['published', 'cancelled', 'ended', 'draft'],
         default: 'published'
     }
 }, { timestamps: true });

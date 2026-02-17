@@ -3,12 +3,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, Edit, Folder, MapPin, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { API_URL } from "../../../context/AuthContext";
+import { API_URL, useAuth } from "../../../context/AuthContext";
 import { Event } from "../../../types";
 
 export default function EventDetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const { token } = useAuth();
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -32,20 +33,21 @@ export default function EventDetailsScreen() {
 
     const handleDelete = () => {
         Alert.alert(
-            "Delete Event",
-            "Are you sure you want to delete this event? This action cannot be undone.",
+            "Cancel Event",
+            "Are you sure you want to cancel this event? This action will mark the event as cancelled.",
             [
-                { text: "Cancel", style: "cancel" },
+                { text: "No", style: "cancel" },
                 {
-                    text: "Delete",
+                    text: "Yes, Cancel",
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await axios.delete(`${API_URL}/events/${id}`);
-                            Alert.alert("Success", "Event deleted successfully");
+                            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                            await axios.delete(`${API_URL}/events/${id}`, { headers });
+                            Alert.alert("Success", "Event cancelled successfully");
                             router.back();
-                        } catch (error) {
-                            Alert.alert("Error", "Failed to delete event");
+                        } catch (error: any) {
+                            Alert.alert("Error", error.response?.data?.message || "Failed to cancel event");
                         }
                     },
                 },
@@ -147,21 +149,31 @@ export default function EventDetailsScreen() {
 
                 {/* Actions */}
                 <View className="flex-row space-x-4 mb-10">
-                    <TouchableOpacity
-                        className="flex-1 flex-row justify-center items-center bg-gray-100 py-4 rounded-xl"
-                        onPress={() => Alert.alert("Coming Soon", "Edit functionality will be implemented soon.")}
-                    >
-                        <Edit size={20} color="#4B5563" />
-                        <Text className="text-gray-700 font-bold ml-2">Edit Event</Text>
-                    </TouchableOpacity>
+                    {event.status !== 'cancelled' && event.status !== 'ended' ? (
+                        <>
+                            <TouchableOpacity
+                                className="flex-1 flex-row justify-center items-center bg-gray-100 py-4 rounded-xl"
+                                onPress={() => Alert.alert("Coming Soon", "Edit functionality will be implemented soon.")}
+                            >
+                                <Edit size={20} color="#4B5563" />
+                                <Text className="text-gray-700 font-bold ml-2">Edit Event</Text>
+                            </TouchableOpacity>
 
-                    <TouchableOpacity
-                        className="flex-1 flex-row justify-center items-center bg-red-50 py-4 rounded-xl"
-                        onPress={handleDelete}
-                    >
-                        <Trash2 size={20} color="#EF4444" />
-                        <Text className="text-red-500 font-bold ml-2">Delete Event</Text>
-                    </TouchableOpacity>
+                            <TouchableOpacity
+                                className="flex-1 flex-row justify-center items-center bg-red-50 py-4 rounded-xl"
+                                onPress={handleDelete}
+                            >
+                                <Trash2 size={20} color="#EF4444" />
+                                <Text className="text-red-500 font-bold ml-2">Cancel Event</Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <View className="flex-1 flex-row justify-center items-center bg-gray-100 py-4 rounded-xl opacity-70">
+                            <Text className="text-gray-500 font-bold text-center">
+                                This event has been {event.status}. Actions are disabled.
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </View>
         </ScrollView>

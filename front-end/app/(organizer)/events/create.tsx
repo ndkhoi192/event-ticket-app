@@ -32,6 +32,7 @@ export default function CreateEventScreen() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [banner, setBanner] = useState<string | null>(null);
+    const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
     const [date, setDate] = useState(new Date());
 
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -68,21 +69,14 @@ export default function CreateEventScreen() {
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            // aspect: [16, 9], // Removing fixed aspect ratio so you can manually drag the crop box to be wide (16:9)
-            allowsEditing: false,
-            quality: 0.5, // Lower quality to keep base64 string size manageable
-            base64: true,
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 0.8,
         });
 
         if (!result.canceled) {
-            // Use Base64 for cross-platform compatibility (Web/Android/iOS) without a dedicated storage server
-            // Note: In production, upload 'result.assets[0].uri' to S3/Cloudinary and save the URL.
-            if (result.assets[0].base64) {
-                const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-                setBanner(base64Img);
-            } else {
-                setBanner(result.assets[0].uri);
-            }
+            setBanner(result.assets[0].uri);
+            setSelectedImage(result.assets[0]);
         }
     };
 
@@ -121,28 +115,35 @@ export default function CreateEventScreen() {
                 remaining_quantity: parseInt(t.total_quantity) || 0,
             }));
 
-            // NOTE: Since we don't have a real upload endpoint in this snippet, 
-            // we are sending the local URI. The backend will likely fail if it expects a valid web URL 
-            // unless it treats this string effectively or we implement an uploader.
-            // For now, I'm passing the URI string.
+            const formData = new FormData();
+            formData.append("title", title);
+            formData.append("description", description);
+            formData.append("date_time", date.toISOString());
+            formData.append("location", JSON.stringify({
+                name: locationName,
+                coordinates,
+            }));
+            formData.append("category_id", selectedCategory);
+            formData.append("ticket_types", JSON.stringify(formattedTickets));
+            formData.append("status", "published");
 
-            const payload = {
-                title,
-                description,
-                banner_url: banner, // TODO: Implement real image upload
-                date_time: date.toISOString(),
-                location: {
-                    name: locationName,
-                    coordinates,
-                },
-                category_id: selectedCategory,
-                ticket_types: formattedTickets,
-                status: "published",
-            };
+            if (selectedImage) {
+                if (Platform.OS === 'web') {
+                    const response = await fetch(selectedImage.uri);
+                    const blob = await response.blob();
+                    formData.append('banner', blob, 'banner.jpg');
+                } else {
+                    formData.append('banner', {
+                        uri: selectedImage.uri,
+                        name: selectedImage.fileName || `banner-${Date.now()}.jpg`,
+                        type: selectedImage.mimeType || 'image/jpeg',
+                    } as any);
+                }
+            }
 
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-            await axios.post(`${API_URL}/events`, payload, { headers });
+            await axios.post(`${API_URL}/events`, formData, { headers });
 
             Alert.alert("Success", "Event created successfully!");
 
