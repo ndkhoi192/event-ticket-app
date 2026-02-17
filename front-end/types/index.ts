@@ -25,9 +25,17 @@ export interface Location {
     };
 }
 
+export interface User {
+    _id: string;
+    full_name: string;
+    email: string;
+    role: 'attendee' | 'organizer' | 'admin';
+    avatar_url?: string;
+}
+
 export interface Event {
     _id: string;
-    organizer_id: string;
+    organizer_id: string | User;
     category_id: Category | string;
     title: string;
     description: string;
