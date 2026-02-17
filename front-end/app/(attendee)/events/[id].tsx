@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Clock, MapPin, Share2, Ticket } from "lucide-react-native";
+import { ArrowLeft, Clock, Heart, MapPin, Share2, Ticket } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { API_URL, useAuth } from "../../../context/AuthContext";
@@ -9,7 +9,7 @@ import { Event } from "../../../types";
 export default function EventDetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -63,6 +63,30 @@ export default function EventDetailsScreen() {
         ? Math.min(...event.ticket_types.map(t => t.price))
         : 0;
 
+    const isSaved = user?.saved_events?.includes(event._id);
+
+    const toggleSave = async () => {
+        if (!user) {
+            Alert.alert("Login Required", "Please login to save events", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Login", onPress: () => router.push("/(auth)/login") }
+            ]);
+            return;
+        }
+
+        try {
+            if (isSaved) {
+                await axios.delete(`${API_URL}/users/me/saved-events/${event._id}`);
+            } else {
+                await axios.post(`${API_URL}/users/me/saved-events/${event._id}`);
+            }
+            await refreshUser();
+        } catch (error) {
+            console.error("Failed to toggle save", error);
+            Alert.alert("Error", "Failed to update saved events");
+        }
+    };
+
     return (
         <View className="flex-1 bg-white">
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -82,12 +106,24 @@ export default function EventDetailsScreen() {
                         >
                             <ArrowLeft color="#1F2937" size={24} />
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            className="bg-white/80 p-2 rounded-full backdrop-blur-md shadow-sm"
-                            onPress={() => Alert.alert("Share", "Sharing not implemented yet!")}
-                        >
-                            <Share2 color="#1F2937" size={24} />
-                        </TouchableOpacity>
+                        <View className="flex-row gap-2">
+                            <TouchableOpacity
+                                className="bg-white/80 p-2 rounded-full backdrop-blur-md shadow-sm mr-2"
+                                onPress={toggleSave}
+                            >
+                                <Heart
+                                    color={isSaved ? "#ef4444" : "#1F2937"}
+                                    fill={isSaved ? "#ef4444" : "none"}
+                                    size={24}
+                                />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className="bg-white/80 p-2 rounded-full backdrop-blur-md shadow-sm"
+                                onPress={() => Alert.alert("Share", "Sharing not implemented yet!")}
+                            >
+                                <Share2 color="#1F2937" size={24} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
 
@@ -109,25 +145,28 @@ export default function EventDetailsScreen() {
                     </View>
 
                     {/* Date & Location Grid */}
-                    <View className="flex-row justify-between mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <View className="flex-1 flex-row items-center">
+                    {/* Date & Location Grid */}
+                    <View className="mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <View className="flex-row items-center">
                             <View className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm mr-3">
                                 <Clock size={20} color="#A7C7E7" />
                             </View>
-                            <View>
+                            <View className="flex-1">
                                 <Text className="text-xs text-gray-500 uppercase font-bold">Date & Time</Text>
                                 <Text className="text-gray-900 font-semibold text-sm">{date}</Text>
                                 <Text className="text-gray-500 text-xs">{time}</Text>
                             </View>
                         </View>
-                        <View className="w-[1px] bg-gray-200 mx-2" />
-                        <View className="flex-1 flex-row items-center pl-2">
+
+                        <View className="h-[1px] bg-gray-200 my-3" />
+
+                        <View className="flex-row items-center">
                             <View className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm mr-3">
                                 <MapPin size={20} color="#FAA0A0" />
                             </View>
-                            <View>
+                            <View className="flex-1">
                                 <Text className="text-xs text-gray-500 uppercase font-bold">Location</Text>
-                                <Text className="text-gray-900 font-semibold text-sm" numberOfLines={2}>
+                                <Text className="text-gray-900 font-semibold text-sm">
                                     {event.location?.name}
                                 </Text>
                             </View>

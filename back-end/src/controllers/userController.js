@@ -77,3 +77,55 @@ exports.getMe = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+// @desc    Save an event
+// @route   POST /api/users/me/saved-events/:eventId
+// @access  Private
+exports.saveEvent = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const eventId = req.params.eventId;
+
+        if (!user.saved_events.includes(eventId)) {
+            user.saved_events.push(eventId);
+            await user.save();
+        }
+
+        res.json(user.saved_events);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Unsave an event
+// @route   DELETE /api/users/me/saved-events/:eventId
+// @access  Private
+exports.unsaveEvent = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const eventId = req.params.eventId;
+
+        user.saved_events = user.saved_events.filter(id => id.toString() !== eventId);
+        await user.save();
+
+        res.json(user.saved_events);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get populated saved events
+// @route   GET /api/users/me/saved-events
+// @access  Private
+exports.getSavedEvents = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).populate('saved_events');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json(user.saved_events);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

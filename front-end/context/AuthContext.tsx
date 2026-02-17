@@ -29,6 +29,7 @@ interface User {
     email: string;
     role: "attendee" | "organizer" | "admin";
     token?: string;
+    saved_events?: string[];
 }
 
 interface AuthContextType {
@@ -43,6 +44,7 @@ interface AuthContextType {
         role: "attendee" | "organizer"
     ) => Promise<void>;
     logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -125,6 +127,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loadUser();
     }, []);
 
+    const refreshUser = async () => {
+        try {
+            const storedToken = await getStorageItem("token");
+            if (storedToken) {
+                const response = await axios.get(`${API_URL}/users/me`);
+                setUser(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to refresh user", error);
+        }
+    };
+
     const login = async (email: string, password: string) => {
         try {
             console.log("Logging in to:", `${API_URL}/auth/login`);
@@ -192,6 +206,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 login,
                 register,
                 logout,
+                refreshUser,
             }}
         >
             {children}

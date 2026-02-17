@@ -31,6 +31,7 @@ export interface User {
     email: string;
     role: 'attendee' | 'organizer' | 'admin';
     avatar_url?: string;
+    saved_events?: string[];
 }
 
 export interface Event {
