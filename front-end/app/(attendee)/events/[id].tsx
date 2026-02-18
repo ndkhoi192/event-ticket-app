@@ -209,7 +209,7 @@ export default function EventDetailsScreen() {
 
                 <TouchableOpacity
                     className="bg-pastel-blue px-8 py-4 rounded-2xl shadow-lg flex-row items-center"
-                    onPress={() => Alert.alert("Booking", "Booking flow coming soon!")}
+                    onPress={() => router.push({ pathname: "/(attendee)/book/[id]", params: { id: Array.isArray(id) ? id[0] : id } })}
                 >
                     <Text className="text-white font-bold text-lg mr-2">Get Ticket</Text>
                     <Ticket color="white" size={20} />

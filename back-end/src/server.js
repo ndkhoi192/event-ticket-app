@@ -25,11 +25,22 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const eventRoutes = require('./routes/eventRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const voucherRoutes = require('./routes/voucherRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/vouchers', voucherRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reviews', reviewRoutes);
+;
 
 app.get('/', (req, res) => {
     res.send('API is running...');
