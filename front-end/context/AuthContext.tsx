@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 const getApiUrl = () => {
-    let url = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.19:3002/api";
+    let url = process.env.EXPO_PUBLIC_API_URL || "http://172.16.0.15:3002/api";
     console.log("Initial API URL:", url);
 
     // Handle localhost on Native platforms
@@ -13,7 +13,7 @@ const getApiUrl = () => {
             url = url.replace("localhost", "10.0.2.2");
         } else {
             // For iOS physical device or simulator wanting to hit host
-            url = url.replace("localhost", "192.168.1.19");
+            url = url.replace("localhost", "172.16.0.15");
         }
     }
 
@@ -170,7 +170,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         role: "attendee" | "organizer"
     ) => {
         try {
-            const response = await axios.post(`${API_URL}/users`, {
+            const response = await axios.post(`${API_URL}/auth/register`, {
                 full_name,
                 email,
                 password,

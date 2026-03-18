@@ -40,7 +40,7 @@ app.use('/api/vouchers', voucherRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
-;
+
 
 app.get('/', (req, res) => {
     res.send('API is running...');

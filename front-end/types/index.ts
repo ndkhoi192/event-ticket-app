@@ -47,3 +47,40 @@ export interface Event {
     add_ons: AddOn[];
     status: 'draft' | 'published' | 'cancelled' | 'ended';
 }
+
+export interface BookingItem {
+    type_name: string;
+    quantity: number;
+    unit_price: number;
+}
+
+export interface Booking {
+    _id: string;
+    user_id: string | User;
+    event_id: string | Event;
+    items: BookingItem[];
+    total_amount: number;
+    payment_method: 'payos' | 'cash' | 'free';
+    payment_status: 'pending' | 'paid' | 'refunded' | 'cancelled';
+    transaction_id?: string;
+    orderCode?: number;
+    checkout_url?: string;
+    confirmed_by?: string;
+    confirmed_at?: string;
+    cancelled_reason?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface TicketItem {
+    _id: string;
+    booking_id: string;
+    event_id: string | Event;
+    user_id: string;
+    ticket_type: string;
+    qr_code_data: string;
+    status: 'valid' | 'used' | 'expired';
+    check_in_at?: string;
+    createdAt: string;
+}
+

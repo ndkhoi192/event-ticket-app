@@ -18,6 +18,12 @@ export default function OrganizerLayout() {
                     tabBarIcon: ({ color }) => <User color={color} />,
                 }}
             />
+            <Tabs.Screen
+                name="events"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
     );
 }

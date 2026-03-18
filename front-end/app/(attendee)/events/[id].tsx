@@ -198,12 +198,12 @@ export default function EventDetailsScreen() {
             {/* Bottom Floating Action Bar */}
             <View className="absolute bottom-0 w-full bg-white border-t border-gray-100 px-6 py-4 pb-8 flex-row items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <View>
-                    <Text className="text-gray-500 text-xs font-medium uppercase">Total Price</Text>
+                    <Text className="text-gray-500 text-xs font-medium uppercase">Giá từ</Text>
                     <View className="flex-row items-baseline">
                         <Text className="text-2xl font-bold text-pastel-pink">
-                            {lowPrice.toLocaleString('vi-VN')} VND
+                            {lowPrice === 0 ? 'Miễn phí' : `${lowPrice.toLocaleString('vi-VN')} VND`}
                         </Text>
-                        <Text className="text-gray-400 text-sm ml-1">/ người</Text>
+                        {lowPrice > 0 && <Text className="text-gray-400 text-sm ml-1">/ người</Text>}
                     </View>
                 </View>
 
@@ -211,7 +211,7 @@ export default function EventDetailsScreen() {
                     className="bg-pastel-blue px-8 py-4 rounded-2xl shadow-lg flex-row items-center"
                     onPress={() => router.push({ pathname: "/(attendee)/book/[id]", params: { id: Array.isArray(id) ? id[0] : id } })}
                 >
-                    <Text className="text-white font-bold text-lg mr-2">Get Ticket</Text>
+                    <Text className="text-white font-bold text-lg mr-2">Đặt vé</Text>
                     <Ticket color="white" size={20} />
                 </TouchableOpacity>
             </View>

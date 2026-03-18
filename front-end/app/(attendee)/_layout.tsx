@@ -50,15 +50,34 @@ export default function AttendeeLayout() {
             <Tabs.Screen
                 name="tickets"
                 options={{
-                    title: "My Tickets",
+                    title: "Vé",
                     tabBarIcon: ({ color }) => <Ticket color={color} size={24} />,
                 }}
             />
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: "Profile",
+                    title: "Cá nhân",
                     tabBarIcon: ({ color }) => <User color={color} size={24} />,
+                }}
+            />
+            {/* Hidden screens - accessible via navigation but not shown in tabs */}
+            <Tabs.Screen
+                name="book"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
+                name="events"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
+                name="saved-events"
+                options={{
+                    href: null,
                 }}
             />
         </Tabs>
