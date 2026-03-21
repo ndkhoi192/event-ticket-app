@@ -1,16 +1,16 @@
 const multer = require('multer');
 const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
 
-// Configure storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // Use path relative to project root
-        cb(null, path.join(__dirname, '../../uploads'));
-    },
-    filename: (req, file, cb) => {
-        // Create unique filename: fieldname-timestamp.ext
-        cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-    }
+// Configure Cloudinary storage
+const storage = new CloudinaryStorage({
+    cloudinary,
+    params: async (req, file) => ({
+        folder: 'event-ticket-app/uploads',
+        resource_type: 'image',
+        public_id: `${file.fieldname}-${Date.now()}`,
+    }),
 });
 
 // File filter for images

@@ -30,6 +30,7 @@ const voucherRoutes = require('./routes/voucherRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const cloudinaryRoutes = require('./routes/cloudinaryRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -40,6 +41,7 @@ app.use('/api/vouchers', voucherRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/cloudinary', cloudinaryRoutes);
 
 
 app.get('/', (req, res) => {

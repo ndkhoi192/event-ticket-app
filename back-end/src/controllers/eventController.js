@@ -21,11 +21,9 @@ exports.createEvent = async (req, res) => {
             req.body.ticket_types = JSON.parse(req.body.ticket_types);
         }
 
-        // Handle file upload
+        // Handle file upload (Cloudinary URL from multer-storage-cloudinary)
         if (req.file) {
-            // Store relative path (e.g., "uploads/filename.jpg") so client can construct full URL
-            // or backend can dynamically prepend host
-            const bannerUrl = `uploads/${req.file.filename}`;
+            const bannerUrl = req.file.path || req.file.secure_url;
             req.body.banner_url = bannerUrl;
         }
 
