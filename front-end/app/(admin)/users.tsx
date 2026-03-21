@@ -22,7 +22,7 @@ export default function ManageUsersScreen() {
             setUsers(response.data);
         } catch (error: any) {
             console.error("Failed to fetch users:", error);
-            Alert.alert("Lỗi", "Không thể tải danh sách người dùng.");
+            Alert.alert("Error", "Could not load users.");
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -42,21 +42,21 @@ export default function ManageUsersScreen() {
         const nextRole = currentRole === "attendee" ? "organizer" : "attendee";
         
         Alert.alert(
-            "Thay đổi quyền",
-            `Mở quyền quản lý (chuyển thành ${nextRole}) cho người dùng này?`,
+            "Change role",
+            `Switch this user role to ${nextRole}?`,
             [
-                { text: "Hủy", style: "cancel" },
+                { text: "Cancel", style: "cancel" },
                 { 
-                    text: "Đồng ý", 
+                    text: "Confirm", 
                     onPress: async () => {
                         try {
                             await axios.put(`${API_URL}/users/${userId}`, { role: nextRole }, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
-                            Alert.alert("Thành công", "Đã cập nhật quyền.");
+                            Alert.alert("Success", "Role updated.");
                             fetchUsers();
                         } catch (error) {
-                            Alert.alert("Lỗi", "Không thể cập nhật quyền.");
+                            Alert.alert("Error", "Could not update role.");
                         }
                     } 
                 }
@@ -79,7 +79,7 @@ export default function ManageUsersScreen() {
                 <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
                     <ArrowLeft color="#FB96BB" size={24} />
                 </TouchableOpacity>
-                <Text className="text-xl font-bold text-gray-900">Quản lý người dùng</Text>
+                <Text className="text-xl font-bold text-gray-900">Manage Users</Text>
             </View>
 
             <FlatList

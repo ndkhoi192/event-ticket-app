@@ -13,27 +13,27 @@ export default function TicketScannerScreen() {
 
     const handleCheckIn = async () => {
         if (!ticketCode.trim()) {
-            Alert.alert("Lỗi", "Vui lòng nhập mã vé.");
+            Alert.alert("Error", "Please enter a ticket code.");
             return;
         }
 
         setLoading(true);
         try {
             const response = await axios.post(`${API_URL}/tickets/validate`, {
-                code: ticketCode.toUpperCase()
+                qr_code_data: ticketCode.trim()
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             // If successful, the ticket is valid and marked as used or validated
             Alert.alert(
-                "Thành công! ✅", 
-                `Vé hợp lệ.\nSự kiện: ${response.data.ticket?.event_id?.title || "Không rõ"}\nLoại: ${response.data.ticket?.type_name || "Không rõ"}`
+                "Success ✅", 
+                `Valid ticket.\nEvent: ${response.data.ticket?.event || "Unknown"}\nType: ${response.data.ticket?.type || "Unknown"}`
             );
             setTicketCode("");
         } catch (error: any) {
-            console.error("Lỗi xác nhận vé:", error);
-            Alert.alert("Lỗi ❌", error.response?.data?.message || "Mã vé không hợp lệ hoặc đã được sử dụng.");
+            console.error("Ticket validation failed:", error);
+            Alert.alert("Error ❌", error.response?.data?.message || "Invalid ticket code or ticket already used.");
         } finally {
             setLoading(false);
         }
@@ -45,7 +45,7 @@ export default function TicketScannerScreen() {
                 <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
                     <ArrowLeft color="#FB96BB" size={24} />
                 </TouchableOpacity>
-                <Text className="text-xl font-bold text-gray-900">Kiểm duyệt vé</Text>
+                <Text className="text-xl font-bold text-gray-900">Ticket Verification</Text>
             </View>
 
             <View className="px-6 items-center">
@@ -53,16 +53,16 @@ export default function TicketScannerScreen() {
                     <QrCode size={48} color="#FB96BB" />
                 </View>
 
-                <Text className="text-xl font-bold text-gray-800 mb-2">Check-in Thủ Công</Text>
+                <Text className="text-xl font-bold text-gray-800 mb-2">Manual Check-in</Text>
                 <Text className="text-gray-500 text-center mb-8 px-4">
-                    Nhập mã code trên vé của khách hàng để xác thực và check-in vào sự kiện.
+                    Enter the attendee ticket code to validate and check in.
                 </Text>
 
                 <TextInput
                     className="w-full border border-gray-200 rounded-xl px-5 py-4 bg-gray-50 text-gray-800 text-lg mb-6 focus:border-pastel-blue text-center uppercase font-bold tracking-widest"
                     value={ticketCode}
                     onChangeText={setTicketCode}
-                    placeholder="NHẬP MÃ SỐ VÉ (VD: TK-1234)"
+                    placeholder="ENTER TICKET CODE (e.g. TK-1234)"
                     autoCapitalize="characters"
                 />
 
@@ -76,7 +76,7 @@ export default function TicketScannerScreen() {
                     ) : (
                         <>
                             <CheckCircle color="white" size={20} />
-                            <Text className="text-white font-bold text-lg ml-2">Xác Nhận Vé</Text>
+                            <Text className="text-white font-bold text-lg ml-2">Validate Ticket</Text>
                         </>
                     )}
                 </TouchableOpacity>

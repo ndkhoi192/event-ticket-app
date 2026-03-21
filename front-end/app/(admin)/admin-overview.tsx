@@ -7,7 +7,7 @@ export default function AdminScreen() {
         <View className="flex-1 bg-gray-50 pt-16 px-6">
             <View className="mb-8">
                 <Text className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</Text>
-                <Text className="text-gray-500 text-base">Hệ thống quản lý</Text>
+                <Text className="text-gray-500 text-base">Management center</Text>
             </View>
 
             <View className="space-y-4">
@@ -19,8 +19,8 @@ export default function AdminScreen() {
                                 <Users size={24} color="#FB96BB" />
                             </View>
                             <View>
-                                <Text className="text-lg font-bold text-gray-800">Quản lý User</Text>
-                                <Text className="text-gray-400 text-sm mt-1">Phân quyền thao tác hệ thống</Text>
+                                <Text className="text-lg font-bold text-gray-800">Manage Users</Text>
+                                <Text className="text-gray-400 text-sm mt-1">Update roles and access</Text>
                             </View>
                         </View>
                         <Text className="text-gray-300 font-bold text-xl">→</Text>
@@ -35,8 +35,8 @@ export default function AdminScreen() {
                                 <Folder size={24} color="#FB96BB" />
                             </View>
                             <View>
-                                <Text className="text-lg font-bold text-gray-800">Quản lý Danh mục</Text>
-                                <Text className="text-gray-400 text-sm mt-1">Thêm/sửa danh mục sự kiện</Text>
+                                <Text className="text-lg font-bold text-gray-800">Manage Categories</Text>
+                                <Text className="text-gray-400 text-sm mt-1">Create and update event categories</Text>
                             </View>
                         </View>
                         <Text className="text-gray-300 font-bold text-xl">→</Text>
@@ -50,7 +50,7 @@ export default function AdminScreen() {
                             <View className="w-12 h-12 bg-gray-50 rounded-full items-center justify-center mr-4">
                                 <User size={24} color="#FB96BB" />
                             </View>
-                            <Text className="text-lg font-bold text-gray-800">Cá nhân & Đăng xuất</Text>
+                            <Text className="text-lg font-bold text-gray-800">Profile & Logout</Text>
                         </View>
                         <Text className="text-gray-300 font-bold text-xl">→</Text>
                     </TouchableOpacity>

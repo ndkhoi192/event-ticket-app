@@ -43,14 +43,14 @@ export default function AttendeeLayout() {
             <Tabs.Screen
                 name="tickets"
                 options={{
-                    title: "Vé",
+                    title: "Tickets",
                     tabBarIcon: ({ color }) => <Ticket color={color} size={24} />,
                 }}
             />
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: "Cá nhân",
+                    title: "Profile",
                     tabBarIcon: ({ color }) => <User color={color} size={24} />,
                 }}
             />

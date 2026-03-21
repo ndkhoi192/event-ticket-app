@@ -204,11 +204,76 @@ exports.updateEvent = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to update this event' });
         }
 
+        if (typeof req.body.location === 'string') {
+            try {
+                req.body.location = JSON.parse(req.body.location);
+            } catch (error) {
+                return res.status(400).json({ message: 'Invalid location format' });
+            }
+        }
+
+        if (typeof req.body.ticket_types === 'string') {
+            try {
+                req.body.ticket_types = JSON.parse(req.body.ticket_types);
+            } catch (error) {
+                return res.status(400).json({ message: 'Invalid ticket_types format' });
+            }
+        }
+
+        if (req.file) {
+            const bannerUrl = req.file.path || req.file.secure_url;
+            req.body.banner_url = bannerUrl;
+        }
+
+        if (req.body.category_id) {
+            const category = await Category.findById(req.body.category_id);
+            if (!category) {
+                return res.status(404).json({ message: 'Category not found' });
+            }
+        }
+
+        if (req.body.ticket_types && Array.isArray(req.body.ticket_types)) {
+            req.body.ticket_types = req.body.ticket_types.map((ticket) => ({
+                ...ticket,
+                price: Number(ticket.price) || 0,
+                total_quantity: Number(ticket.total_quantity) || 0,
+                remaining_quantity: ticket.remaining_quantity !== undefined
+                    ? Number(ticket.remaining_quantity) || 0
+                    : Number(ticket.total_quantity) || 0
+            }));
+        }
+
+        const allowedFields = [
+            'category_id',
+            'title',
+            'description',
+            'banner_url',
+            'date_time',
+            'location',
+            'ticket_types',
+            'add_ons',
+            'status'
+        ];
+
+        const updateData = {};
+        allowedFields.forEach((field) => {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        });
+
         const updatedEvent = await Event.findByIdAndUpdate(
             req.params.id,
-            { $set: req.body },
+            { $set: updateData },
             { new: true }
-        );
+        )
+            .populate('organizer_id', 'full_name email')
+            .populate('category_id', 'name icon_url');
+
+        if (!updatedEvent) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
         // Convert to object and append full URL to banner_url if relative
         const eventObj = updatedEvent.toObject();
         if (eventObj.banner_url && !eventObj.banner_url.startsWith('http')) {

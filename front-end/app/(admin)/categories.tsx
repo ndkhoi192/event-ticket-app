@@ -40,7 +40,7 @@ export default function ManageCategoriesScreen() {
 
     const handleSave = async () => {
         if (!currentCat.name.trim()) {
-            Alert.alert("Lỗi", "Tên danh mục không được để trống.");
+            Alert.alert("Error", "Category name is required.");
             return;
         }
 
@@ -49,38 +49,38 @@ export default function ManageCategoriesScreen() {
             if (currentCat._id) {
                 // Update
                 await axios.put(`${API_URL}/categories/${currentCat._id}`, { name: currentCat.name }, { headers });
-                Alert.alert("Thành công", "Cập nhật thành công.");
+                Alert.alert("Success", "Category updated.");
             } else {
                 // Create
                 await axios.post(`${API_URL}/categories`, { name: currentCat.name }, { headers });
-                Alert.alert("Thành công", "Thêm mới thành công.");
+                Alert.alert("Success", "Category created.");
             }
             setModalVisible(false);
             fetchCategories();
         } catch (error) {
             console.error(error);
-            Alert.alert("Lỗi", "Không thể lưu danh mục.");
+            Alert.alert("Error", "Could not save category.");
         }
     };
 
     const handleDelete = (id: string, name: string) => {
         Alert.alert(
-            "Xóa danh mục",
-            `Bạn có chắc muốn xóa "${name}"?`,
+            "Delete category",
+            `Are you sure you want to delete "${name}"?`,
             [
-                { text: "Hủy", style: "cancel" },
+                { text: "Cancel", style: "cancel" },
                 {
-                    text: "Xóa",
+                    text: "Delete",
                     style: "destructive",
                     onPress: async () => {
                         try {
                             await axios.delete(`${API_URL}/categories/${id}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
-                            Alert.alert("Thành công", "Đã xóa danh mục.");
+                            Alert.alert("Success", "Category deleted.");
                             fetchCategories();
                         } catch (error) {
-                            Alert.alert("Lỗi", "Không thể xóa (có thể danh mục đang được sử dụng).");
+                            Alert.alert("Error", "Could not delete category (it may be in use).");
                         }
                     }
                 }
@@ -104,7 +104,7 @@ export default function ManageCategoriesScreen() {
                     <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
                         <ArrowLeft color="#FB96BB" size={24} />
                     </TouchableOpacity>
-                    <Text className="text-xl font-bold text-gray-900">Danh mục</Text>
+                    <Text className="text-xl font-bold text-gray-900">Categories</Text>
                 </View>
                 <TouchableOpacity 
                     className="p-2 bg-pastel-pink rounded-full shadow-sm"
@@ -157,12 +157,12 @@ export default function ManageCategoriesScreen() {
                 <View className="flex-1 justify-end bg-black/50">
                     <View className="bg-white px-6 pt-6 pb-12 rounded-t-3xl shadow-xl">
                         <Text className="text-xl font-bold text-gray-800 mb-4">
-                            {currentCat._id ? "Sửa danh mục" : "Thêm danh mục"}
+                            {currentCat._id ? "Edit category" : "Add category"}
                         </Text>
                         
                         <TextInput
                             className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-4 mb-6 text-base focus:border-pastel-pink focus:bg-white"
-                            placeholder="Tên danh mục..."
+                            placeholder="Category name..."
                             value={currentCat.name}
                             onChangeText={(text) => setCurrentCat({ ...currentCat, name: text })}
                             autoFocus
@@ -173,13 +173,13 @@ export default function ManageCategoriesScreen() {
                                 className="flex-1 items-center justify-center bg-gray-100 py-4 rounded-xl mr-2"
                                 onPress={() => setModalVisible(false)}
                             >
-                                <Text className="text-gray-600 font-bold text-base">Hủy</Text>
+                                <Text className="text-gray-600 font-bold text-base">Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 className="flex-1 items-center justify-center bg-pastel-pink py-4 rounded-xl ml-2"
                                 onPress={handleSave}
                             >
-                                <Text className="text-white font-bold text-base">Lưu lại</Text>
+                                <Text className="text-white font-bold text-base">Save</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

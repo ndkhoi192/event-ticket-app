@@ -14,7 +14,7 @@ export default function EditProfileScreen() {
 
     const handleSave = async () => {
         if (!fullName.trim()) {
-            Alert.alert("Lỗi", "Tên không được để trống");
+            Alert.alert("Error", "Name is required.");
             return;
         }
 
@@ -27,12 +27,12 @@ export default function EditProfileScreen() {
             });
 
             await refreshUser();
-            Alert.alert("Thành công", "Đã cập nhật thông tin cá nhân", [
+            Alert.alert("Success", "Profile updated.", [
                 { text: "OK", onPress: () => router.back() }
             ]);
         } catch (error) {
-            console.error("Lỗi cập nhật profile:", error);
-            Alert.alert("Lỗi", "Không thể cập nhật thông tin.");
+            console.error("Profile update failed:", error);
+            Alert.alert("Error", "Could not update profile.");
         } finally {
             setLoading(false);
         }
@@ -44,19 +44,19 @@ export default function EditProfileScreen() {
                 <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
                     <ArrowLeft color="#FB96BB" size={24} />
                 </TouchableOpacity>
-                <Text className="text-xl font-bold text-gray-900">Sửa Trang Cá Nhân</Text>
+                <Text className="text-xl font-bold text-gray-900">Edit Profile</Text>
             </View>
 
             <View className="px-6">
-                <Text className="text-gray-700 font-bold mb-2">Họ và tên</Text>
+                <Text className="text-gray-700 font-bold mb-2">Full name</Text>
                 <TextInput
                     className="border border-gray-200 rounded-xl px-4 py-4 bg-gray-50 text-gray-800 text-base mb-4 focus:border-pastel-pink"
                     value={fullName}
                     onChangeText={setFullName}
-                    placeholder="Nhập họ tên"
+                    placeholder="Enter full name"
                 />
 
-                <Text className="text-gray-700 font-bold mb-2">Email (Không thể thay đổi)</Text>
+                <Text className="text-gray-700 font-bold mb-2">Email (read-only)</Text>
                 <TextInput
                     className="border border-gray-200 rounded-xl px-4 py-4 bg-gray-100 text-gray-500 text-base mb-8"
                     value={user?.email}
@@ -73,7 +73,7 @@ export default function EditProfileScreen() {
                     ) : (
                         <>
                             <Save color="white" size={20} />
-                            <Text className="text-white font-bold text-lg ml-2">Lưu Thay Đổi</Text>
+                            <Text className="text-white font-bold text-lg ml-2">Save Changes</Text>
                         </>
                     )}
                 </TouchableOpacity>

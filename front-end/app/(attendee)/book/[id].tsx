@@ -32,7 +32,7 @@ export default function BookingScreen() {
         setQuantities(initialQuantities);
       } catch (error) {
         console.error("Failed to fetch event", error);
-        Alert.alert("Loi", "Khong the tai thong tin su kien");
+        Alert.alert("Error", "Could not load event details.");
         router.back();
       } finally {
         setLoading(false);
@@ -51,7 +51,7 @@ export default function BookingScreen() {
 
       const ticketType = event?.ticket_types.find((t) => t.type_name === typeName);
       if (ticketType && newVal > ticketType.remaining_quantity) {
-        Alert.alert("Da dat gioi han", `Chi con ${ticketType.remaining_quantity} ve.`);
+        Alert.alert("Limit reached", "You cannot select more tickets for this type.");
         return prev;
       }
 
@@ -69,30 +69,23 @@ export default function BookingScreen() {
     }, 0);
   };
 
-  const isFreeEvent = () => {
-    if (!event) {
-      return false;
-    }
-    return event.ticket_types.every((t) => t.price === 0);
-  };
-
   const confirmPayment = async (bookingId: string) => {
     setProcessing(true);
     try {
       const response = await axios.post(`${API_URL}/bookings/${bookingId}/confirm-payment`);
       if (response.data.booking.payment_status === "paid") {
-        Alert.alert("Thanh cong", "Thanh toan da duoc xac nhan. Ve da san sang!", [
-          { text: "Xem ve", onPress: () => router.replace("/(attendee)/tickets") },
+        Alert.alert("Success", "Payment confirmed. Your tickets are ready.", [
+          { text: "View tickets", onPress: () => router.replace("/(attendee)/tickets") },
         ]);
       } else {
-        Alert.alert("Chua xac nhan", "He thong chua nhan duoc thanh toan. Vui long thu lai sau.", [
-          { text: "Huy", style: "cancel" },
-          { text: "Thu lai", onPress: () => confirmPayment(bookingId) },
+        Alert.alert("Not confirmed yet", "Payment has not been confirmed. Please try again.", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Retry", onPress: () => confirmPayment(bookingId) },
         ]);
       }
     } catch (error: any) {
       console.error("Confirmation failed", error);
-      Alert.alert("Loi", error.response?.data?.message || "Khong the xac nhan thanh toan");
+      Alert.alert("Error", error.response?.data?.message || "Could not confirm payment.");
     } finally {
       setProcessing(false);
     }
@@ -103,7 +96,7 @@ export default function BookingScreen() {
     const hasSelected = Object.values(quantities).some((q) => q > 0);
 
     if (!hasSelected) {
-      Alert.alert("Chon ve", "Vui long chon it nhat mot ve.");
+      Alert.alert("Select tickets", "Please select at least one ticket.");
       return;
     }
 
@@ -133,8 +126,8 @@ export default function BookingScreen() {
       const { booking, checkoutQrData, message } = response.data;
 
       if (booking.payment_status === "paid") {
-        Alert.alert("Thanh cong", message || "Ve da duoc dat thanh cong!", [
-          { text: "Xem ve", onPress: () => router.replace("/(attendee)/tickets") },
+        Alert.alert("Success", message || "Booking completed successfully.", [
+          { text: "View tickets", onPress: () => router.replace("/(attendee)/tickets") },
         ]);
         return;
       }
@@ -144,11 +137,11 @@ export default function BookingScreen() {
         setCheckoutQrData(checkoutQrData);
         setQrModalVisible(true);
       } else {
-        Alert.alert("Loi", "Khong nhan duoc QR thanh toan tu server.");
+        Alert.alert("Error", "Could not receive the payment QR.");
       }
     } catch (error: any) {
       console.error("Booking failed", error);
-      Alert.alert("Dat ve that bai", error.response?.data?.message || "Da xay ra loi. Vui long thu lai.");
+      Alert.alert("Booking failed", error.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessing(false);
     }
@@ -165,13 +158,13 @@ export default function BookingScreen() {
   if (!event) {
     return (
       <View className="flex-1 bg-white justify-center items-center">
-        <Text>Khong tim thay su kien</Text>
+        <Text>Event not found</Text>
       </View>
     );
   }
 
   const total = calculateTotal();
-  const isFree = isFreeEvent();
+  const hasSelected = Object.values(quantities).some((q) => q > 0);
 
   return (
     <View className="flex-1 bg-white">
@@ -180,12 +173,12 @@ export default function BookingScreen() {
           <ArrowLeft color="#FB96BB" size={24} />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-gray-900 flex-1" numberOfLines={1}>
-          Dat ve: {event.title}
+          Book: {event.title}
         </Text>
       </View>
 
       <ScrollView className="flex-1 px-6 pt-6">
-        <Text className="text-lg font-bold text-gray-800 mb-4">Chon loai ve</Text>
+        <Text className="text-lg font-bold text-gray-800 mb-4">Choose ticket types</Text>
 
         {event.ticket_types.map((type) => (
           <View
@@ -195,9 +188,8 @@ export default function BookingScreen() {
             <View className="flex-1">
               <Text className="font-bold text-gray-900 text-base">{type.type_name}</Text>
               <Text className="text-pastel-pink font-semibold mt-1">
-                {type.price === 0 ? "Mien phi" : `${type.price.toLocaleString("vi-VN")} VND`}
+                {`${type.price.toLocaleString("vi-VN")} VND`}
               </Text>
-              <Text className="text-gray-400 text-xs mt-1">Con {type.remaining_quantity} ve</Text>
             </View>
 
             <View className="flex-row items-center bg-white rounded-lg shadow-sm border border-gray-100">
@@ -212,9 +204,9 @@ export default function BookingScreen() {
           </View>
         ))}
 
-        {!isFree && total > 0 && (
+        {total > 0 && (
           <View className="mt-4 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-3">Phuong thuc thanh toan</Text>
+            <Text className="text-lg font-bold text-gray-800 mb-3">Payment method</Text>
 
             <View className="flex-row items-center p-4 rounded-xl border mb-3 border-pink-400 bg-pink-50">
               <View className="w-10 h-10 rounded-full items-center justify-center mr-3 bg-pink-400">
@@ -222,17 +214,11 @@ export default function BookingScreen() {
               </View>
               <View className="flex-1">
                 <Text className="font-bold text-base text-pink-600">
-                  QR thanh toan
+                  QR payment
                 </Text>
-                <Text className="text-gray-400 text-xs mt-0.5">He thong se hien QR fake, ban bam nut da thanh toan de hoan tat.</Text>
+                <Text className="text-gray-400 text-xs mt-0.5">A demo QR will be shown. Tap payment success after payment.</Text>
               </View>
             </View>
-          </View>
-        )}
-
-        {isFree && (
-          <View className="mt-2 mb-4 p-4 bg-pink-50 rounded-xl border border-pink-200">
-            <Text className="text-pink-700 font-semibold text-center">Su kien mien phi - Khong can thanh toan!</Text>
           </View>
         )}
 
@@ -241,25 +227,25 @@ export default function BookingScreen() {
 
       <View className="p-6 border-t border-gray-100 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <View className="flex-row justify-between items-center mb-4">
-          <Text className="text-gray-500 font-medium">Tong cong</Text>
+          <Text className="text-gray-500 font-medium">Total</Text>
           <Text className="text-2xl font-bold text-pastel-pink">
-            {total === 0 ? "Mien phi" : `${total.toLocaleString("vi-VN")} VND`}
+            {`${total.toLocaleString("vi-VN")} VND`}
           </Text>
         </View>
 
         <TouchableOpacity
           className={`py-4 rounded-2xl shadow-lg flex-row justify-center items-center ${processing ? "opacity-70" : ""} ${
-            isFree || total === 0 ? "bg-pink-500" : "bg-pastel-blue"
+            !hasSelected ? "bg-gray-300" : total === 0 ? "bg-pink-500" : "bg-pastel-blue"
           }`}
           onPress={handleCheckout}
-          disabled={processing}
+          disabled={processing || !hasSelected}
         >
           {processing ? (
             <ActivityIndicator color="white" />
           ) : (
             <>
               <Text className="text-white font-bold text-lg mr-2">
-                {isFree || total === 0 ? "Dat ve mien phi" : "Tao QR thanh toan"}
+                {total === 0 ? "Book tickets" : "Proceed to QR payment"}
               </Text>
               <Ticket color="white" size={20} />
             </>
@@ -270,15 +256,15 @@ export default function BookingScreen() {
       <Modal visible={qrModalVisible} transparent animationType="slide" onRequestClose={() => setQrModalVisible(false)}>
         <View className="flex-1 bg-black/40 justify-end">
           <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10">
-            <Text className="text-xl font-bold text-gray-900 text-center">QR thanh toan</Text>
-            <Text className="text-gray-500 text-center mt-2">Quet QR ben duoi, sau do bam nut da thanh toan thanh cong.</Text>
+            <Text className="text-xl font-bold text-gray-900 text-center">Payment QR</Text>
+            <Text className="text-gray-500 text-center mt-2">Scan this QR, then tap payment success.</Text>
 
             <View className="mt-5 mb-4 items-center">
               {checkoutQrData ? (
                 <Image source={{ uri: checkoutQrData }} style={{ width: 220, height: 220 }} resizeMode="contain" />
               ) : (
                 <View className="w-[220px] h-[220px] bg-gray-100 rounded-2xl items-center justify-center">
-                  <Text className="text-gray-400">Khong co QR</Text>
+                  <Text className="text-gray-400">No QR available</Text>
                 </View>
               )}
             </View>
@@ -294,11 +280,11 @@ export default function BookingScreen() {
               }}
               disabled={processing}
             >
-              <Text className="text-white text-center font-bold">Da thanh toan thanh cong</Text>
+              <Text className="text-white text-center font-bold">Payment successful</Text>
             </TouchableOpacity>
 
             <TouchableOpacity className="mt-3 py-3" onPress={() => setQrModalVisible(false)}>
-              <Text className="text-center text-gray-500 font-semibold">Dong</Text>
+              <Text className="text-center text-gray-500 font-semibold">Close</Text>
             </TouchableOpacity>
           </View>
         </View>

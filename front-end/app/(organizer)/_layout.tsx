@@ -58,6 +58,12 @@ export default function OrganizerLayout() {
                 }}
             />
             <Tabs.Screen
+                name="events/edit/[id]"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
                 name="scanner"
                 options={{
                     href: null,

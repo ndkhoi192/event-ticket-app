@@ -25,7 +25,7 @@ router.get('/my-events', protect, authorize('organizer'), getMyEvents);
 
 router.route('/:id')
     .get(getEventById)
-    .put(protect, authorize('organizer', 'admin'), updateEvent)
+    .put(protect, authorize('organizer', 'admin'), upload.single('banner'), updateEvent)
     .delete(protect, authorize('organizer', 'admin'), deleteEvent);
 
 module.exports = router;

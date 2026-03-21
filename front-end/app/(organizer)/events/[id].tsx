@@ -24,7 +24,7 @@ export default function EventDetailsScreen() {
         setEvent(response.data);
       } catch (error) {
         console.error("Failed to fetch event details:", error);
-        Alert.alert("Loi", "Khong the tai thong tin su kien");
+        Alert.alert("Error", "Could not load event details.");
       } finally {
         setLoading(false);
       }
@@ -44,25 +44,25 @@ export default function EventDetailsScreen() {
       setShowBookings(true);
     } catch (error: any) {
       console.error("Failed to fetch bookings:", error);
-      Alert.alert("Loi", error.response?.data?.message || "Khong the tai danh sach don");
+      Alert.alert("Error", error.response?.data?.message || "Could not load bookings.");
     } finally {
       setLoadingBookings(false);
     }
   };
 
   const handleConfirmCash = (bookingId: string, userName: string) => {
-    Alert.alert("Xac nhan thanh toan tien mat", `Xac nhan da nhan tien mat tu ${userName}?`, [
-      { text: "Huy", style: "cancel" },
+    Alert.alert("Confirm cash payment", `Confirm that cash payment was received from ${userName}?`, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: "Xac nhan",
+        text: "Confirm",
         onPress: async () => {
           try {
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             await axios.post(`${API_URL}/bookings/${bookingId}/confirm-payment`, {}, { headers });
-            Alert.alert("Thanh cong", "Thanh toan da duoc xac nhan!");
+            Alert.alert("Success", "Payment confirmed.");
             fetchBookings();
           } catch (error: any) {
-            Alert.alert("Loi", error.response?.data?.message || "Khong the xac nhan");
+            Alert.alert("Error", error.response?.data?.message || "Could not confirm payment.");
           }
         },
       },
@@ -70,19 +70,19 @@ export default function EventDetailsScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert("Huy su kien", "Ban co chac muon huy su kien nay?", [
-      { text: "Khong", style: "cancel" },
+    Alert.alert("Cancel event", "Are you sure you want to cancel this event?", [
+      { text: "No", style: "cancel" },
       {
-        text: "Huy su kien",
+        text: "Cancel event",
         style: "destructive",
         onPress: async () => {
           try {
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             await axios.delete(`${API_URL}/events/${id}`, { headers });
-            Alert.alert("Thanh cong", "Su kien da duoc huy");
+            Alert.alert("Success", "Event cancelled.");
             router.back();
           } catch (error: any) {
-            Alert.alert("Loi", error.response?.data?.message || "Khong the huy su kien");
+            Alert.alert("Error", error.response?.data?.message || "Could not cancel event.");
           }
         },
       },
@@ -92,13 +92,13 @@ export default function EventDetailsScreen() {
   const getPaymentStatusStyle = (status: string) => {
     switch (status) {
       case "paid":
-        return { bg: "bg-pink-100", text: "text-pink-700", label: "Da TT" };
+        return { bg: "bg-pink-100", text: "text-pink-700", label: "Paid" };
       case "pending":
-        return { bg: "bg-yellow-100", text: "text-yellow-700", label: "Cho TT" };
+        return { bg: "bg-yellow-100", text: "text-yellow-700", label: "Pending" };
       case "refunded":
-        return { bg: "bg-pink-100", text: "text-pink-600", label: "Hoan tien" };
+        return { bg: "bg-pink-100", text: "text-pink-600", label: "Refunded" };
       case "cancelled":
-        return { bg: "bg-red-100", text: "text-red-600", label: "Da huy" };
+        return { bg: "bg-red-100", text: "text-red-600", label: "Cancelled" };
       default:
         return { bg: "bg-gray-100", text: "text-gray-500", label: status };
     }
@@ -109,9 +109,9 @@ export default function EventDetailsScreen() {
       case "payos":
         return "Online";
       case "cash":
-        return "Tien mat";
+        return "Cash";
       case "free":
-        return "Mien phi";
+        return "0 VND";
       default:
         return m;
     }
@@ -128,19 +128,19 @@ export default function EventDetailsScreen() {
   if (!event) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <Text className="text-gray-500">Khong tim thay su kien</Text>
+        <Text className="text-gray-500">Event not found</Text>
       </View>
     );
   }
 
-  const date = new Date(event.date_time).toLocaleDateString("vi-VN", {
+  const date = new Date(event.date_time).toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 
-  const time = new Date(event.date_time).toLocaleTimeString("vi-VN", {
+  const time = new Date(event.date_time).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -184,21 +184,21 @@ export default function EventDetailsScreen() {
           </Text>
         </View>
 
-        <Text className="text-lg font-bold text-gray-800 mb-2">Mo ta su kien</Text>
+        <Text className="text-lg font-bold text-gray-800 mb-2">Event Description</Text>
         <Text className="text-gray-500 leading-6 mb-8">{event.description}</Text>
 
-        <Text className="text-lg font-bold text-gray-800 mb-3">Thong tin ve</Text>
+        <Text className="text-lg font-bold text-gray-800 mb-3">Ticket Information</Text>
         <View className="space-y-3 mb-6">
           {event.ticket_types.map((ticket, index) => (
             <View key={index} className="flex-row justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
               <View>
                 <Text className="font-bold text-gray-700 text-lg">{ticket.type_name}</Text>
                 <Text className="text-gray-400 text-sm">
-                  {ticket.remaining_quantity} / {ticket.total_quantity} con lai
+                  {ticket.remaining_quantity} / {ticket.total_quantity} remaining
                 </Text>
               </View>
               <Text className="text-pastel-blue font-bold text-lg">
-                {ticket.price === 0 ? "Mien phi" : `${ticket.price.toLocaleString()} d`}
+                {`${ticket.price.toLocaleString("en-US")} VND`}
               </Text>
             </View>
           ))}
@@ -214,7 +214,7 @@ export default function EventDetailsScreen() {
           ) : (
             <>
               <Users size={20} color="#FB96BB" />
-              <Text className="text-pink-600 font-bold ml-2">{showBookings ? "Lam moi don dat ve" : "Xem don dat ve"}</Text>
+              <Text className="text-pink-600 font-bold ml-2">{showBookings ? "Refresh bookings" : "View bookings"}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -223,33 +223,33 @@ export default function EventDetailsScreen() {
           <View className="mb-6">
             <View className="flex-row mb-4">
               <View className="flex-1 bg-pink-50 p-3 rounded-xl mr-2 border border-pink-100">
-                <Text className="text-pink-700 text-xs font-semibold">Doanh thu</Text>
-                <Text className="text-pink-800 font-bold text-lg">{totalRevenue.toLocaleString()} d</Text>
+                <Text className="text-pink-700 text-xs font-semibold">Revenue</Text>
+                <Text className="text-pink-800 font-bold text-lg">{totalRevenue.toLocaleString("en-US")} VND</Text>
               </View>
               <View className="flex-1 bg-pink-50 p-3 rounded-xl ml-2 border border-pink-100">
-                <Text className="text-pink-700 text-xs font-semibold">Tong don</Text>
+                <Text className="text-pink-700 text-xs font-semibold">Total bookings</Text>
                 <Text className="text-pink-700 font-bold text-lg">{bookings.length}</Text>
               </View>
             </View>
 
             {pendingCashBookings.length > 0 && (
               <View className="mb-4">
-                <Text className="text-base font-bold text-yellow-700 mb-2">Cho xac nhan tien mat ({pendingCashBookings.length})</Text>
+                <Text className="text-base font-bold text-yellow-700 mb-2">Pending cash confirmations ({pendingCashBookings.length})</Text>
                 {pendingCashBookings.map((b) => {
                   const u = b.user_id as any;
                   return (
                     <View key={b._id} className="bg-yellow-50 p-3 rounded-xl border border-yellow-200 mb-2">
                       <View className="flex-row justify-between items-center mb-1">
-                        <Text className="font-bold text-gray-800">{u?.full_name || "Khach"}</Text>
-                        <Text className="font-bold text-yellow-700">{b.total_amount.toLocaleString()} d</Text>
+                        <Text className="font-bold text-gray-800">{u?.full_name || "Guest"}</Text>
+                        <Text className="font-bold text-yellow-700">{b.total_amount.toLocaleString("en-US")} VND</Text>
                       </View>
                       <Text className="text-gray-500 text-xs mb-2">{b.items.map((i) => `${i.type_name} x${i.quantity}`).join(", ")}</Text>
                       <TouchableOpacity
                         className="bg-pink-500 py-2 rounded-lg flex-row justify-center items-center"
-                        onPress={() => handleConfirmCash(b._id, u?.full_name || "Khach")}
+                        onPress={() => handleConfirmCash(b._id, u?.full_name || "Guest")}
                       >
                         <CheckCircle size={16} color="white" />
-                        <Text className="text-white font-bold text-sm ml-1">Xac nhan da nhan tien</Text>
+                        <Text className="text-white font-bold text-sm ml-1">Confirm cash received</Text>
                       </TouchableOpacity>
                     </View>
                   );
@@ -257,9 +257,9 @@ export default function EventDetailsScreen() {
               </View>
             )}
 
-            <Text className="text-base font-bold text-gray-800 mb-2">Tat ca don ({bookings.length})</Text>
+            <Text className="text-base font-bold text-gray-800 mb-2">All bookings ({bookings.length})</Text>
             {bookings.length === 0 ? (
-              <Text className="text-gray-400 text-center py-4">Chua co don dat ve nao</Text>
+              <Text className="text-gray-400 text-center py-4">No bookings yet</Text>
             ) : (
               bookings.map((b) => {
                 const u = b.user_id as any;
@@ -279,7 +279,7 @@ export default function EventDetailsScreen() {
                       <Text className="text-gray-500 text-xs">
                         {getMethodLabel(b.payment_method)} • {b.items.map((i) => `${i.type_name} x${i.quantity}`).join(", ")}
                       </Text>
-                      <Text className="text-gray-700 font-semibold text-xs">{b.total_amount.toLocaleString()} d</Text>
+                      <Text className="text-gray-700 font-semibold text-xs">{b.total_amount.toLocaleString("en-US")} VND</Text>
                     </View>
                   </View>
                 );
@@ -293,21 +293,21 @@ export default function EventDetailsScreen() {
             <>
               <TouchableOpacity
                 className="flex-1 flex-row justify-center items-center bg-gray-100 py-4 rounded-xl"
-                onPress={() => Alert.alert("Sap ra mat", "Chuc nang chinh sua se duoc cap nhat som.")}
+                onPress={() => router.push(`/(organizer)/events/edit/${event._id}` as any)}
               >
                 <Edit size={20} color="#FB96BB" />
-                <Text className="text-gray-700 font-bold ml-2">Sua</Text>
+                <Text className="text-gray-700 font-bold ml-2">Edit</Text>
               </TouchableOpacity>
 
               <TouchableOpacity className="flex-1 flex-row justify-center items-center bg-red-50 py-4 rounded-xl" onPress={handleDelete}>
                 <Trash2 size={20} color="#FB96BB" />
-                <Text className="text-red-500 font-bold ml-2">Huy su kien</Text>
+                <Text className="text-red-500 font-bold ml-2">Cancel event</Text>
               </TouchableOpacity>
             </>
           ) : (
             <View className="flex-1 flex-row justify-center items-center bg-gray-100 py-4 rounded-xl opacity-70">
               <Text className="text-gray-500 font-bold text-center">
-                Su kien da {event.status === "cancelled" ? "bi huy" : "ket thuc"}.
+                Event is already {event.status === "cancelled" ? "cancelled" : "ended"}.
               </Text>
             </View>
           )}

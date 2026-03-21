@@ -8,10 +8,10 @@ import { API_URL, useAuth } from "../../context/AuthContext";
 interface Voucher {
     _id: string;
     code: string;
-    discount_amount?: number;
-    max_uses?: number;
-    used_count?: number;
-    valid_until: string;
+    discount_type: "percentage" | "fixed";
+    discount_value: number;
+    min_order_value: number;
+    expiry_date: string;
 }
 
 export default function ManageVouchersScreen() {
@@ -23,8 +23,19 @@ export default function ManageVouchersScreen() {
 
     // Modal state
     const [modalVisible, setModalVisible] = useState(false);
-    const [formData, setFormData] = useState<{_id?: string, code: string, discount_amount: string, max_uses: string, valid_until: string}>({ 
-        code: "", discount_amount: "", max_uses: "", valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() 
+    const [formData, setFormData] = useState<{
+        _id?: string;
+        code: string;
+        discount_type: "percentage" | "fixed";
+        discount_value: string;
+        min_order_value: string;
+        expiry_date: string;
+    }>({
+        code: "",
+        discount_type: "fixed",
+        discount_value: "",
+        min_order_value: "0",
+        expiry_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
     });
 
     const toSafeNumber = (value: unknown, fallback = 0) => {
@@ -40,10 +51,10 @@ export default function ManageVouchersScreen() {
             const normalized: Voucher[] = (Array.isArray(response.data) ? response.data : []).map((item: any) => ({
                 _id: String(item?._id || item?.id || Math.random().toString(36).slice(2)),
                 code: String(item?.code || "NO-CODE"),
-                discount_amount: toSafeNumber(item?.discount_amount, 0),
-                max_uses: toSafeNumber(item?.max_uses, 0),
-                used_count: toSafeNumber(item?.used_count, 0),
-                valid_until: item?.valid_until || new Date().toISOString(),
+                discount_type: item?.discount_type === "percentage" ? "percentage" : "fixed",
+                discount_value: toSafeNumber(item?.discount_value, 0),
+                min_order_value: toSafeNumber(item?.min_order_value, 0),
+                expiry_date: item?.expiry_date || new Date().toISOString(),
             }));
             setVouchers(normalized);
         } catch (error) {
@@ -64,54 +75,55 @@ export default function ManageVouchersScreen() {
     };
 
     const handleSave = async () => {
-        if (!formData.code || !formData.discount_amount || !formData.max_uses) {
-            Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin.");
+        if (!formData.code || !formData.discount_value || !formData.expiry_date) {
+            Alert.alert("Error", "Please fill in all required fields.");
             return;
         }
 
         try {
             const payload = {
                 code: formData.code.toUpperCase(),
-                discount_amount: Number(formData.discount_amount),
-                max_uses: Number(formData.max_uses),
-                valid_until: formData.valid_until,
+                discount_type: formData.discount_type,
+                discount_value: Number(formData.discount_value),
+                min_order_value: Number(formData.min_order_value || 0),
+                expiry_date: new Date(formData.expiry_date).toISOString(),
                 event_id: null // Global voucher for this organizer's events
             };
 
             const headers = { Authorization: `Bearer ${token}` };
             if (formData._id) {
                 await axios.put(`${API_URL}/vouchers/${formData._id}`, payload, { headers });
-                Alert.alert("Thành công", "Cập nhật mã giảm giá thành công.");
+                Alert.alert("Success", "Voucher updated successfully.");
             } else {
                 await axios.post(`${API_URL}/vouchers`, payload, { headers });
-                Alert.alert("Thành công", "Thêm mã giảm giá thành công.");
+                Alert.alert("Success", "Voucher created successfully.");
             }
             setModalVisible(false);
             fetchVouchers();
         } catch (error: any) {
             console.error(error);
-            Alert.alert("Lỗi", error.response?.data?.message || "Không thể lưu mã giảm giá.");
+            Alert.alert("Error", error.response?.data?.message || "Could not save voucher.");
         }
     };
 
     const handleDelete = (id: string, code: string) => {
         Alert.alert(
-            "Xóa mã",
-            `Bạn có chắc muốn xóa mã giảm giá "${code}"?`,
+            "Delete voucher",
+            `Are you sure you want to delete voucher "${code}"?`,
             [
-                { text: "Hủy", style: "cancel" },
+                { text: "Cancel", style: "cancel" },
                 {
-                    text: "Xóa",
+                    text: "Delete",
                     style: "destructive",
                     onPress: async () => {
                         try {
                             await axios.delete(`${API_URL}/vouchers/${id}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
-                            Alert.alert("Thành công", "Đã xóa mã giảm giá.");
+                            Alert.alert("Success", "Voucher deleted.");
                             fetchVouchers();
                         } catch (error) {
-                            Alert.alert("Lỗi", "Không thể xóa mã giảm giá.");
+                            Alert.alert("Error", "Could not delete voucher.");
                         }
                     }
                 }
@@ -135,14 +147,17 @@ export default function ManageVouchersScreen() {
                     <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
                         <ArrowLeft color="#FB96BB" size={24} />
                     </TouchableOpacity>
-                    <Text className="text-xl font-bold text-gray-900">Mã Giảm Giá</Text>
+                    <Text className="text-xl font-bold text-gray-900">Vouchers</Text>
                 </View>
                 <TouchableOpacity 
                     className="p-2 bg-pastel-blue rounded-full shadow-sm"
                     onPress={() => {
                         setFormData({ 
-                            code: "", discount_amount: "", max_uses: "", 
-                            valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() 
+                            code: "",
+                            discount_type: "fixed",
+                            discount_value: "",
+                            min_order_value: "0",
+                            expiry_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
                         });
                         setModalVisible(true);
                     }}
@@ -157,20 +172,20 @@ export default function ManageVouchersScreen() {
                 contentContainerStyle={{ padding: 16 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FB96BB" />}
                 ListEmptyComponent={
-                    <Text className="text-center text-gray-400 mt-10">Chưa có mã giảm giá nào được tạo.</Text>
+                    <Text className="text-center text-gray-400 mt-10">No vouchers created yet.</Text>
                 }
                 renderItem={({ item }) => (
                     <View className="bg-white p-4 rounded-xl border border-gray-100 mb-3 flex-row justify-between items-center shadow-sm">
                         <View className="flex-1">
                             <Text className="text-lg font-bold text-pastel-blue">{item.code}</Text>
                             <Text className="text-gray-600 mt-1">
-                                Giảm: <Text className="font-bold">{toSafeNumber(item.discount_amount).toLocaleString("vi-VN")}đ</Text>
+                                Discount: <Text className="font-bold">{item.discount_type === "percentage" ? `${item.discount_value}%` : `${item.discount_value.toLocaleString("en-US")} VND`}</Text>
                             </Text>
                             <Text className="text-gray-500 text-xs mt-1">
-                                Đã dùng: {toSafeNumber(item.used_count)} / {toSafeNumber(item.max_uses)}
+                                Minimum order: {item.min_order_value.toLocaleString("en-US")} VND
                             </Text>
                             <Text className="text-gray-400 text-xs mt-1">
-                                Hết hạn: {new Date(item.valid_until).toLocaleDateString('vi-VN')}
+                                Expires: {new Date(item.expiry_date).toLocaleDateString('en-US')}
                             </Text>
                         </View>
                         
@@ -181,9 +196,10 @@ export default function ManageVouchersScreen() {
                                     setFormData({ 
                                         _id: item._id, 
                                         code: item.code, 
-                                        discount_amount: toSafeNumber(item.discount_amount).toString(), 
-                                        max_uses: toSafeNumber(item.max_uses).toString(),
-                                        valid_until: item.valid_until
+                                        discount_type: item.discount_type,
+                                        discount_value: toSafeNumber(item.discount_value).toString(),
+                                        min_order_value: toSafeNumber(item.min_order_value).toString(),
+                                        expiry_date: new Date(item.expiry_date).toISOString().slice(0, 10)
                                     });
                                     setModalVisible(true);
                                 }}
@@ -206,46 +222,68 @@ export default function ManageVouchersScreen() {
                 <View className="flex-1 justify-end bg-black/50">
                     <View className="bg-white px-6 pt-6 pb-12 rounded-t-3xl shadow-xl">
                         <Text className="text-xl font-bold text-gray-800 mb-4">
-                            {formData._id ? "Sửa mã giảm giá" : "Thêm mã giảm giá"}
+                            {formData._id ? "Edit voucher" : "Add voucher"}
                         </Text>
                         
                         <TextInput
                             className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 mb-4 text-base focus:border-pastel-blue focus:bg-white uppercase"
-                            placeholder="Mã CODE (VD: SUMMER24)"
+                            placeholder="Code (e.g. SUMMER24)"
                             value={formData.code}
                             onChangeText={(t) => setFormData({ ...formData, code: t })}
                             autoCapitalize="characters"
                         />
+
+                        <View className="flex-row mb-4">
+                            <TouchableOpacity
+                                className={`flex-1 py-3 rounded-xl mr-2 border ${formData.discount_type === "fixed" ? "bg-pink-50 border-pink-300" : "bg-gray-50 border-gray-200"}`}
+                                onPress={() => setFormData({ ...formData, discount_type: "fixed" })}
+                            >
+                                <Text className="text-center font-semibold text-gray-700">Fixed amount</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className={`flex-1 py-3 rounded-xl ml-2 border ${formData.discount_type === "percentage" ? "bg-pink-50 border-pink-300" : "bg-gray-50 border-gray-200"}`}
+                                onPress={() => setFormData({ ...formData, discount_type: "percentage" })}
+                            >
+                                <Text className="text-center font-semibold text-gray-700">Percentage</Text>
+                            </TouchableOpacity>
+                        </View>
                         
                         <View className="flex-row mb-4 space-x-4">
                             <TextInput
                                 className="flex-1 border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-base focus:border-pastel-blue"
-                                placeholder="Mức giảm (VNĐ)"
-                                value={formData.discount_amount}
-                                onChangeText={(t) => setFormData({ ...formData, discount_amount: t })}
+                                placeholder={formData.discount_type === "percentage" ? "Discount (%)" : "Discount (VND)"}
+                                value={formData.discount_value}
+                                onChangeText={(t) => setFormData({ ...formData, discount_value: t })}
                                 keyboardType="numeric"
                             />
                             <TextInput
                                 className="flex-1 border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-base focus:border-pastel-blue"
-                                placeholder="Số lượt tối đa"
-                                value={formData.max_uses}
-                                onChangeText={(t) => setFormData({ ...formData, max_uses: t })}
+                                placeholder="Minimum order (VND)"
+                                value={formData.min_order_value}
+                                onChangeText={(t) => setFormData({ ...formData, min_order_value: t })}
                                 keyboardType="numeric"
                             />
                         </View>
+
+                        <TextInput
+                            className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 mb-4 text-base focus:border-pastel-blue"
+                            placeholder="Expiry date (YYYY-MM-DD)"
+                            value={formData.expiry_date}
+                            onChangeText={(t) => setFormData({ ...formData, expiry_date: t })}
+                        />
                         
                         <View className="flex-row space-x-4 mt-2">
                             <TouchableOpacity 
                                 className="flex-1 items-center justify-center bg-gray-100 py-4 rounded-xl mr-2"
                                 onPress={() => setModalVisible(false)}
                             >
-                                <Text className="text-gray-600 font-bold text-base">Hủy</Text>
+                                <Text className="text-gray-600 font-bold text-base">Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 className="flex-1 items-center justify-center bg-pastel-blue py-4 rounded-xl ml-2"
                                 onPress={handleSave}
                             >
-                                <Text className="text-white font-bold text-base">Lưu lại</Text>
+                                <Text className="text-white font-bold text-base">Save</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

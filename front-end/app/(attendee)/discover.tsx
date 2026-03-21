@@ -9,11 +9,13 @@ import { Category, Event } from "../../types";
 
 export default function DiscoverScreen() {
     const params = useLocalSearchParams();
+    const incomingSearch = typeof params.search === "string" ? params.search : "";
+    const incomingCategory = typeof params.category === "string" ? params.category : "All";
     const [events, setEvents] = useState<Event[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState(params.search as string || "");
-    const [selectedCategory, setSelectedCategory] = useState(params.category as string || "All");
+    const [searchQuery, setSearchQuery] = useState(incomingSearch);
+    const [selectedCategory, setSelectedCategory] = useState(incomingCategory);
     const [refreshing, setRefreshing] = useState(false);
 
     const fetchEvents = async () => {
@@ -44,6 +46,11 @@ export default function DiscoverScreen() {
     useEffect(() => {
         fetchCategories();
     }, []);
+
+    useEffect(() => {
+        setSearchQuery(incomingSearch);
+        setSelectedCategory(incomingCategory);
+    }, [incomingSearch, incomingCategory]);
 
     useEffect(() => {
         setLoading(true);

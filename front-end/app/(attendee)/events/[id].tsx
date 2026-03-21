@@ -2,16 +2,46 @@ import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, Heart, MapPin, Share2, Ticket } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { API_URL, useAuth } from "../../../context/AuthContext";
 import { Event } from "../../../types";
+
+type ReviewItem = {
+    _id: string;
+    rating: number;
+    comment: string;
+    user_id: {
+        full_name: string;
+    };
+    createdAt: string;
+};
 
 export default function EventDetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const { user, refreshUser } = useAuth();
     const [event, setEvent] = useState<Event | null>(null);
+    const [reviews, setReviews] = useState<ReviewItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [rating, setRating] = useState<number>(5);
+    const [comment, setComment] = useState<string>("");
+
+    const fetchReviews = async () => {
+        if (!id) {
+            return;
+        }
+        setLoadingReviews(true);
+        try {
+            const response = await axios.get(`${API_URL}/reviews/${id}`);
+            setReviews(Array.isArray(response.data) ? response.data : []);
+        } catch (error) {
+            console.error("Failed to load reviews", error);
+        } finally {
+            setLoadingReviews(false);
+        }
+    };
 
     useEffect(() => {
         const fetchEventDetails = async () => {
@@ -28,8 +58,41 @@ export default function EventDetailsScreen() {
 
         if (id) {
             fetchEventDetails();
+            fetchReviews();
         }
     }, [id]);
+
+    const handleSubmitReview = async () => {
+        if (!user) {
+            Alert.alert("Login Required", "Please login to write a review", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Login", onPress: () => router.push("/(auth)/login") },
+            ]);
+            return;
+        }
+
+        if (!comment.trim()) {
+            Alert.alert("Missing comment", "Please write a short review.");
+            return;
+        }
+
+        setSubmittingReview(true);
+        try {
+            await axios.post(`${API_URL}/reviews`, {
+                event_id: event?._id,
+                rating,
+                comment: comment.trim(),
+            });
+            setComment("");
+            setRating(5);
+            await fetchReviews();
+            Alert.alert("Thanks!", "Your review has been submitted.");
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Could not submit review.");
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -47,14 +110,14 @@ export default function EventDetailsScreen() {
         );
     }
 
-    const date = new Date(event.date_time).toLocaleDateString("vi-VN", {
+    const date = new Date(event.date_time).toLocaleDateString("en-US", {
         weekday: "short",
         day: "numeric",
         month: "short",
         year: "numeric",
     });
 
-    const time = new Date(event.date_time).toLocaleTimeString("vi-VN", {
+    const time = new Date(event.date_time).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
     });
@@ -62,6 +125,10 @@ export default function EventDetailsScreen() {
     const lowPrice = event.ticket_types && event.ticket_types.length > 0
         ? Math.min(...event.ticket_types.map(t => t.price))
         : 0;
+
+    const averageRating = reviews.length > 0
+        ? (reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length).toFixed(1)
+        : null;
 
     const isSaved = user?.saved_events?.includes(event._id);
 
@@ -192,18 +259,78 @@ export default function EventDetailsScreen() {
                             <Text className="text-pastel-blue font-bold text-xs">Follow</Text>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Reviews */}
+                    <View className="mb-8">
+                        <View className="flex-row items-center justify-between mb-3">
+                            <Text className="text-xl font-bold text-gray-900">Reviews</Text>
+                            <Text className="text-gray-500 text-sm font-semibold">
+                                {averageRating ? `${averageRating} / 5 (${reviews.length})` : "No reviews yet"}
+                            </Text>
+                        </View>
+
+                        <View className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-4">
+                            <Text className="font-semibold text-gray-800 mb-2">Write your review</Text>
+                            <View className="flex-row mb-3">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <TouchableOpacity key={star} onPress={() => setRating(star)} className="mr-1">
+                                        <Text className={`text-xl ${star <= rating ? "text-yellow-500" : "text-gray-300"}`}>★</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                            <TextInput
+                                className="bg-white border border-gray-200 rounded-lg px-3 py-3 text-gray-700"
+                                placeholder="Share your experience"
+                                value={comment}
+                                onChangeText={setComment}
+                                multiline
+                            />
+                            <TouchableOpacity
+                                className={`mt-3 py-3 rounded-lg ${submittingReview ? "bg-gray-300" : "bg-pastel-blue"}`}
+                                onPress={handleSubmitReview}
+                                disabled={submittingReview}
+                            >
+                                <Text className="text-center text-white font-bold">
+                                    {submittingReview ? "Submitting..." : "Submit review"}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {loadingReviews ? (
+                            <View className="py-6 items-center">
+                                <ActivityIndicator size="small" color="#FB96BB" />
+                            </View>
+                        ) : reviews.length === 0 ? (
+                            <View className="py-5 bg-white border border-gray-100 rounded-xl items-center">
+                                <Text className="text-gray-400">No reviews yet.</Text>
+                            </View>
+                        ) : (
+                            reviews.map((item) => (
+                                <View key={item._id} className="bg-white border border-gray-100 rounded-xl p-4 mb-3">
+                                    <View className="flex-row items-center justify-between mb-1">
+                                        <Text className="font-bold text-gray-800">{item.user_id?.full_name || "Anonymous"}</Text>
+                                        <Text className="text-yellow-500 font-semibold">{item.rating}.0 ★</Text>
+                                    </View>
+                                    <Text className="text-gray-600 mb-2">{item.comment}</Text>
+                                    <Text className="text-gray-400 text-xs">
+                                        {new Date(item.createdAt).toLocaleDateString("en-US")}
+                                    </Text>
+                                </View>
+                            ))
+                        )}
+                    </View>
                 </View>
             </ScrollView>
 
             {/* Bottom Floating Action Bar */}
             <View className="absolute bottom-0 w-full bg-white border-t border-gray-100 px-6 py-4 pb-8 flex-row items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <View>
-                    <Text className="text-gray-500 text-xs font-medium uppercase">Giá từ</Text>
+                    <Text className="text-gray-500 text-xs font-medium uppercase">Starting from</Text>
                     <View className="flex-row items-baseline">
                         <Text className="text-2xl font-bold text-pastel-pink">
-                            {lowPrice === 0 ? 'Miễn phí' : `${lowPrice.toLocaleString('vi-VN')} VND`}
+                            {`${lowPrice.toLocaleString('en-US')} VND`}
                         </Text>
-                        {lowPrice > 0 && <Text className="text-gray-400 text-sm ml-1">/ người</Text>}
+                        {lowPrice > 0 && <Text className="text-gray-400 text-sm ml-1">/ person</Text>}
                     </View>
                 </View>
 
@@ -211,7 +338,7 @@ export default function EventDetailsScreen() {
                     className="bg-pastel-blue px-8 py-4 rounded-2xl shadow-lg flex-row items-center"
                     onPress={() => router.push({ pathname: "/(attendee)/book/[id]", params: { id: Array.isArray(id) ? id[0] : id } })}
                 >
-                    <Text className="text-white font-bold text-lg mr-2">Đặt vé</Text>
+                    <Text className="text-white font-bold text-lg mr-2">Book now</Text>
                     <Ticket color="white" size={20} />
                 </TouchableOpacity>
             </View>
