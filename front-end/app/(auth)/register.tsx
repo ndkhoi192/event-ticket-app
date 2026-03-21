@@ -67,34 +67,34 @@ export default function RegisterScreen() {
                             style={role === "attendee" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
                             onPress={() => setRole("attendee")}
                         >
-                            <Text className="font-semibold" style={{ color: role === "attendee" ? "#A7C7E7" : "#6B7280" }}>Attendee</Text>
+                            <Text className="font-semibold" style={{ color: role === "attendee" ? "#FB96BB" : "#FB96BB" }}>Attendee</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             className="flex-1 py-2 rounded-full items-center"
                             style={role === "organizer" ? { backgroundColor: "white", elevation: 2, shadowOpacity: 0.1, shadowRadius: 2 } : {}}
                             onPress={() => setRole("organizer")}
                         >
-                            <Text className="font-semibold" style={{ color: role === "organizer" ? "#FAA0A0" : "#6B7280" }}>Organizer</Text>
+                            <Text className="font-semibold" style={{ color: role === "organizer" ? "#FB96BB" : "#FB96BB" }}>Organizer</Text>
                         </TouchableOpacity>
                     </View>
 
                     <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
-                        <User color="#9CA3AF" size={20} />
+                        <User color="#FB96BB" size={20} />
                         <TextInput
                             className="flex-1 ml-3 text-gray-700"
                             placeholder="Full Name"
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor="#FB96BB"
                             value={fullName}
                             onChangeText={setFullName}
                         />
                     </View>
 
                     <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
-                        <Mail color="#9CA3AF" size={20} />
+                        <Mail color="#FB96BB" size={20} />
                         <TextInput
                             className="flex-1 ml-3 text-gray-700"
                             placeholder="Email Address"
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor="#FB96BB"
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -103,11 +103,11 @@ export default function RegisterScreen() {
                     </View>
 
                     <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-pink">
-                        <Lock color="#9CA3AF" size={20} />
+                        <Lock color="#FB96BB" size={20} />
                         <TextInput
                             className="flex-1 ml-3 text-gray-700"
                             placeholder="Password"
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor="#FB96BB"
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
@@ -139,3 +139,4 @@ export default function RegisterScreen() {
         </KeyboardAvoidingView>
     );
 }
+

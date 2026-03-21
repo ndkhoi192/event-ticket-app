@@ -4,7 +4,7 @@ const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
 const Notification = require('../models/Notification');
 const crypto = require('crypto');
-const payos = require('../utils/payos');
+const generateQR = require('../utils/generateQR');
 
 // Helper: Generate tickets for a booking
 const generateTickets = async (booking) => {
@@ -27,6 +27,14 @@ const generateTickets = async (booking) => {
         await Ticket.insertMany(tickets);
     }
     return tickets;
+};
+
+const getOrCreateTickets = async (booking) => {
+    const existingTickets = await Ticket.find({ booking_id: booking._id });
+    if (existingTickets.length > 0) {
+        return existingTickets;
+    }
+    return generateTickets(booking);
 };
 
 // Helper: Create a notification for the user
@@ -75,9 +83,13 @@ exports.createBooking = async (req, res) => {
         }
         const user_id = req.user._id;
 
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: 'No tickets selected' });
+        }
+
         // Validate payment method
-        const validMethods = ['payos', 'cash', 'free'];
-        const method = validMethods.includes(payment_method) ? payment_method : 'cash';
+        const validMethods = ['payos', 'cash'];
+        const method = validMethods.includes(payment_method) ? payment_method : 'payos';
 
         // Check if event exists
         const event = await Event.findById(event_id);
@@ -91,7 +103,12 @@ exports.createBooking = async (req, res) => {
 
         // Check items availability and reduce quantities
         let totalTickets = 0;
+        let calculatedTotal = 0;
         for (const item of items) {
+            if (!item || !item.type_name || !item.quantity || item.quantity <= 0) {
+                return res.status(400).json({ message: 'Invalid ticket item' });
+            }
+
             const ticketType = event.ticket_types.find(t => t.type_name === item.type_name);
             if (!ticketType) {
                 return res.status(400).json({ message: `Ticket type "${item.type_name}" not found in event` });
@@ -101,6 +118,7 @@ exports.createBooking = async (req, res) => {
             }
             ticketType.remaining_quantity -= item.quantity;
             totalTickets += item.quantity;
+            calculatedTotal += Number(item.unit_price || 0) * item.quantity;
         }
 
         if (totalTickets === 0) {
@@ -110,47 +128,43 @@ exports.createBooking = async (req, res) => {
         // Save updated event quantities
         await event.save();
 
-        // Determine actual payment method
-        let actualMethod = method;
-        if (total_amount === 0) {
-            actualMethod = 'free';
-        }
+        const totalAmount = Math.max(0, Number.isFinite(Number(total_amount)) ? Number(total_amount) : calculatedTotal);
+        const isZeroAmount = totalAmount === 0 || calculatedTotal === 0;
 
         // Create booking
         const bookingData = {
             user_id,
             event_id,
             items,
-            total_amount,
-            payment_method: actualMethod,
-            payment_status: 'pending'
+            total_amount: totalAmount,
+            payment_method: method,
+            payment_status: isZeroAmount ? 'paid' : 'pending'
         };
 
-        // ============ CASE 1: FREE EVENT ============
-        if (actualMethod === 'free') {
-            bookingData.payment_status = 'paid';
+        // ============ CASE 1: ZERO-AMOUNT BOOKING ============
+        if (isZeroAmount) {
             const newBooking = new Booking(bookingData);
             const savedBooking = await newBooking.save();
 
             // Generate tickets immediately
-            const tickets = await generateTickets(savedBooking);
+            const tickets = await getOrCreateTickets(savedBooking);
 
             // Notify user
             await createNotification(
                 user_id,
                 'Đặt vé thành công!',
-                `Bạn đã đặt ${totalTickets} vé cho sự kiện "${event.title}" (miễn phí).`
+                `Bạn đã đặt ${totalTickets} vé cho sự kiện "${event.title}".`
             );
 
             return res.status(201).json({
                 booking: savedBooking,
                 tickets,
-                message: 'Free tickets booked successfully!'
+                message: 'Booking completed successfully.'
             });
         }
 
         // ============ CASE 2: CASH PAYMENT ============
-        if (actualMethod === 'cash') {
+        if (method === 'cash') {
             const newBooking = new Booking(bookingData);
             const savedBooking = await newBooking.save();
 
@@ -167,54 +181,31 @@ exports.createBooking = async (req, res) => {
             });
         }
 
-        // ============ CASE 3: PAYOS ONLINE PAYMENT ============
-        const orderCode = Date.now() % 9007199254740991; // Ensure within safe range
+        // ============ CASE 3: ONLINE PAYMENT (FAKE QR FLOW) ============
+        const orderCode = Date.now() % 9007199254740991;
         bookingData.orderCode = orderCode;
 
         const newBooking = new Booking(bookingData);
         const savedBooking = await newBooking.save();
 
-        // Create PayOS Payment Link
-        const YOUR_DOMAIN = process.env.PAYOS_RETURN_URL || 'http://localhost:8081';
-        const amountInt = Math.max(1, Math.floor(total_amount)); // PayOS requires min 1
+        const qrPayload = JSON.stringify({
+            bookingId: savedBooking._id.toString(),
+            orderCode,
+            amount: savedBooking.total_amount,
+            eventTitle: event.title
+        });
+        const qrDataUrl = await generateQR(qrPayload);
 
-        const paymentData = {
-            orderCode: orderCode,
-            amount: amountInt,
-            description: `Vé ${event.title}`.substring(0, 25),
-            cancelUrl: `${YOUR_DOMAIN}/cancel`,
-            returnUrl: `${YOUR_DOMAIN}/success`,
-            items: items.map(item => ({
-                name: item.type_name.substring(0, 25),
-                quantity: item.quantity,
-                price: Math.floor(item.unit_price)
-            }))
-        };
-
-        let paymentLinkResponse;
-        try {
-            paymentLinkResponse = await payos.createPaymentLink(paymentData);
-        } catch (payOsError) {
-            console.error("PayOS Error:", payOsError);
-            // Rollback: restore ticket quantities and mark booking as cancelled
-            await rollbackTicketQuantities(event_id, items);
-            savedBooking.payment_status = 'cancelled';
-            savedBooking.cancelled_reason = 'Payment gateway error: ' + (payOsError.message || 'Unknown error');
-            await savedBooking.save();
-
-            return res.status(500).json({
-                message: "Không thể tạo link thanh toán. Vui lòng thử lại hoặc chọn thanh toán tiền mặt.",
-                error: payOsError.message || 'Payment Gateway Error'
-            });
-        }
-
-        // Save checkout URL
-        savedBooking.checkout_url = paymentLinkResponse.checkoutUrl;
+        // Keep checkout_url for backward compatibility with current frontend
+        savedBooking.checkout_url = `fakepay://booking/${savedBooking._id}`;
+        savedBooking.checkout_qr_data = qrDataUrl || '';
         await savedBooking.save();
 
         res.status(201).json({
             booking: savedBooking,
-            checkoutUrl: paymentLinkResponse.checkoutUrl
+            checkoutUrl: savedBooking.checkout_url,
+            checkoutQrData: savedBooking.checkout_qr_data,
+            message: 'Booking created. Scan QR and tap confirm payment when done.'
         });
 
     } catch (err) {
@@ -235,40 +226,30 @@ exports.confirmPayment = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
+        const isOwner = booking.user_id.toString() === req.user._id.toString();
+        const isAdmin = req.user.role === 'admin';
+        const isOrganizer = req.user.role === 'organizer';
+
         if (booking.payment_status === 'paid') {
-            return res.json({ message: 'Already paid', booking });
+            const tickets = await Ticket.find({ booking_id: booking._id });
+            return res.json({ message: 'Already paid', booking, tickets });
         }
 
         if (booking.payment_status === 'cancelled' || booking.payment_status === 'refunded') {
             return res.status(400).json({ message: 'Booking has been cancelled/refunded' });
         }
 
-        if (booking.payment_method === 'free') {
-            // Should already be paid
-            return res.json({ message: 'Free booking', booking });
-        }
-
         if (booking.payment_method === 'payos') {
-            // Verify with PayOS
-            if (!booking.orderCode) {
-                return res.status(400).json({ message: 'No orderCode found for this booking' });
+            if (!isOwner && !isAdmin) {
+                return res.status(403).json({ message: 'Not authorized to confirm this payment' });
             }
-
-            const paymentInfo = await payos.getPaymentLinkInformation(booking.orderCode);
-            if (!paymentInfo || paymentInfo.status !== 'PAID') {
-                return res.status(400).json({
-                    message: 'Thanh toán chưa hoàn tất. Vui lòng hoàn tất thanh toán rồi thử lại.',
-                    status: paymentInfo?.status
-                });
-            }
-
             booking.payment_status = 'paid';
-            booking.transaction_id = paymentInfo.transactions?.[0]?.reference || '';
+            booking.transaction_id = booking.transaction_id || `FAKE-${Date.now()}`;
             await booking.save();
 
         } else if (booking.payment_method === 'cash') {
             // Cash confirmation requires organizer/admin
-            if (req.user.role !== 'organizer' && req.user.role !== 'admin') {
+            if (!isOrganizer && !isAdmin) {
                 return res.status(403).json({ message: 'Only organizer or admin can confirm cash payment' });
             }
             booking.payment_status = 'paid';
@@ -278,7 +259,7 @@ exports.confirmPayment = async (req, res) => {
         }
 
         // Generate tickets
-        const tickets = await generateTickets(booking);
+        const tickets = await getOrCreateTickets(booking);
 
         // Notify user
         const event = await Event.findById(booking.event_id);
@@ -322,14 +303,14 @@ exports.payosWebhook = async (req, res) => {
             return res.status(200).json({ message: 'Already processed' });
         }
 
-        // Payment success
+        // Keep this endpoint for backward compatibility; in fake flow we trust success callbacks.
         if (code === '00' || desc === 'success') {
             booking.payment_status = 'paid';
             booking.transaction_id = req.body.data?.transactionId || '';
             await booking.save();
 
             // Generate tickets
-            await generateTickets(booking);
+            await getOrCreateTickets(booking);
 
             // Notify user
             const event = await Event.findById(booking.event_id);

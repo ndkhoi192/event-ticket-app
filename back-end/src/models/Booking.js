@@ -31,7 +31,7 @@ const bookingSchema = new mongoose.Schema({
     },
     payment_method: {
         type: String,
-        enum: ['payos', 'cash', 'free'],
+        enum: ['payos', 'cash'],
         required: true
     },
     payment_status: {
@@ -49,6 +49,10 @@ const bookingSchema = new mongoose.Schema({
     checkout_url: {
         type: String
         // Store PayOS checkout URL for reference
+    },
+    checkout_qr_data: {
+        type: String
+        // Fake payment QR image (base64) for frontend demo flow
     },
     confirmed_by: {
         type: mongoose.Schema.Types.ObjectId,

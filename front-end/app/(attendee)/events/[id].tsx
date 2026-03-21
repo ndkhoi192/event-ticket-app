@@ -34,7 +34,7 @@ export default function EventDetailsScreen() {
     if (loading) {
         return (
             <View className="flex-1 justify-center items-center bg-white">
-                <ActivityIndicator size="large" color="#A7C7E7" />
+                <ActivityIndicator size="large" color="#FB96BB" />
             </View>
         );
     }
@@ -104,7 +104,7 @@ export default function EventDetailsScreen() {
                             className="bg-white/80 p-2 rounded-full backdrop-blur-md shadow-sm"
                             onPress={() => router.back()}
                         >
-                            <ArrowLeft color="#1F2937" size={24} />
+                            <ArrowLeft color="#FB96BB" size={24} />
                         </TouchableOpacity>
                         <View className="flex-row gap-2">
                             <TouchableOpacity
@@ -112,8 +112,8 @@ export default function EventDetailsScreen() {
                                 onPress={toggleSave}
                             >
                                 <Heart
-                                    color={isSaved ? "#ef4444" : "#1F2937"}
-                                    fill={isSaved ? "#ef4444" : "none"}
+                                    color={isSaved ? "#FB96BB" : "#FB96BB"}
+                                    fill={isSaved ? "#FB96BB" : "none"}
                                     size={24}
                                 />
                             </TouchableOpacity>
@@ -121,7 +121,7 @@ export default function EventDetailsScreen() {
                                 className="bg-white/80 p-2 rounded-full backdrop-blur-md shadow-sm"
                                 onPress={() => Alert.alert("Share", "Sharing not implemented yet!")}
                             >
-                                <Share2 color="#1F2937" size={24} />
+                                <Share2 color="#FB96BB" size={24} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -132,7 +132,7 @@ export default function EventDetailsScreen() {
                     <Text className="text-3xl font-bold text-gray-900 mb-2 leading-tight">{event.title}</Text>
 
                     <View className="flex-row items-center mb-6">
-                        <View className="bg-blue-50 px-3 py-1 rounded-full mr-2">
+                        <View className="bg-pink-50 px-3 py-1 rounded-full mr-2">
                             <Text className="text-pastel-blue font-semibold text-xs">
                                 {typeof event.category_id === 'object' ? event.category_id.name : "Event"}
                             </Text>
@@ -149,7 +149,7 @@ export default function EventDetailsScreen() {
                     <View className="mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
                         <View className="flex-row items-center">
                             <View className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm mr-3">
-                                <Clock size={20} color="#A7C7E7" />
+                                <Clock size={20} color="#FB96BB" />
                             </View>
                             <View className="flex-1">
                                 <Text className="text-xs text-gray-500 uppercase font-bold">Date & Time</Text>
@@ -162,7 +162,7 @@ export default function EventDetailsScreen() {
 
                         <View className="flex-row items-center">
                             <View className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm mr-3">
-                                <MapPin size={20} color="#FAA0A0" />
+                                <MapPin size={20} color="#FB96BB" />
                             </View>
                             <View className="flex-1">
                                 <Text className="text-xs text-gray-500 uppercase font-bold">Location</Text>

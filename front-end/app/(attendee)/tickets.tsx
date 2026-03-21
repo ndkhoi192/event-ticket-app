@@ -5,6 +5,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Image,
+    Modal,
     RefreshControl,
     ScrollView,
     Text,
@@ -24,6 +26,9 @@ export default function TicketsScreen() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [qrModalVisible, setQrModalVisible] = useState(false);
+    const [selectedBookingId, setSelectedBookingId] = useState<string>("");
+    const [selectedQrData, setSelectedQrData] = useState<string>("");
 
     const fetchData = useCallback(async () => {
         try {
@@ -63,7 +68,7 @@ export default function TicketsScreen() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'valid': return { bg: 'bg-green-100', text: 'text-green-700', label: 'Hợp lệ' };
+            case 'valid': return { bg: 'bg-pink-100', text: 'text-pink-700', label: 'Hợp lệ' };
             case 'used': return { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Đã sử dụng' };
             case 'expired': return { bg: 'bg-red-100', text: 'text-red-600', label: 'Hết hạn' };
             default: return { bg: 'bg-gray-100', text: 'text-gray-500', label: status };
@@ -72,9 +77,9 @@ export default function TicketsScreen() {
 
     const getPaymentStatusStyle = (status: string) => {
         switch (status) {
-            case 'paid': return { bg: 'bg-green-100', text: 'text-green-700', label: 'Đã thanh toán' };
+            case 'paid': return { bg: 'bg-pink-100', text: 'text-pink-700', label: 'Đã thanh toán' };
             case 'pending': return { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Chờ thanh toán' };
-            case 'refunded': return { bg: 'bg-blue-100', text: 'text-blue-600', label: 'Đã hoàn tiền' };
+            case 'refunded': return { bg: 'bg-pink-100', text: 'text-pink-600', label: 'Đã hoàn tiền' };
             case 'cancelled': return { bg: 'bg-red-100', text: 'text-red-600', label: 'Đã hủy' };
             default: return { bg: 'bg-gray-100', text: 'text-gray-500', label: status };
         }
@@ -82,9 +87,8 @@ export default function TicketsScreen() {
 
     const getPaymentMethodLabel = (method: string) => {
         switch (method) {
-            case 'payos': return 'Chuyển khoản';
+            case 'payos': return 'QR thanh toan';
             case 'cash': return 'Tiền mặt';
-            case 'free': return 'Miễn phí';
             default: return method;
         }
     };
@@ -112,13 +116,14 @@ export default function TicketsScreen() {
         );
     };
 
-    const handleRetryPayment = async (booking: Booking) => {
-        if (booking.checkout_url) {
-            const Linking = require("expo-linking");
-            await Linking.openURL(booking.checkout_url);
-        } else {
-            Alert.alert("Lỗi", "Không tìm thấy link thanh toán.");
+    const handleOpenPaymentQr = (booking: Booking) => {
+        if (!booking.checkout_qr_data) {
+            Alert.alert("Loi", "Khong tim thay QR thanh toan.");
+            return;
         }
+        setSelectedBookingId(booking._id);
+        setSelectedQrData(booking.checkout_qr_data);
+        setQrModalVisible(true);
     };
 
     const handleConfirmPayment = async (bookingId: string) => {
@@ -138,7 +143,7 @@ export default function TicketsScreen() {
     if (loading) {
         return (
             <View className="flex-1 bg-white justify-center items-center">
-                <ActivityIndicator size="large" color="#F472B6" />
+                <ActivityIndicator size="large" color="#FB96BB" />
             </View>
         );
     }
@@ -146,12 +151,12 @@ export default function TicketsScreen() {
     return (
         <View className="flex-1 bg-gray-50">
             {/* Header */}
-            <View className="pt-12 pb-4 px-6 bg-white border-b border-gray-100">
+            <View className="pt-14 pb-5 px-6 bg-white border-b border-gray-100">
                 <Text className="text-2xl font-bold text-gray-900">Vé của tôi</Text>
             </View>
 
             {/* Tabs */}
-            <View className="flex-row bg-white px-6 pb-3 border-b border-gray-100">
+            <View className="flex-row bg-white px-6 pb-4 border-b border-gray-100">
                 <TouchableOpacity
                     onPress={() => setActiveTab('tickets')}
                     className={`flex-1 py-3 rounded-xl mr-2 ${activeTab === 'tickets' ? 'bg-pink-500' : 'bg-gray-100'}`}
@@ -171,15 +176,15 @@ export default function TicketsScreen() {
             </View>
 
             <ScrollView
-                className="flex-1 px-6 pt-4"
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#F472B6"]} />}
+                className="flex-1 px-6 pt-5"
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FB96BB"]} />}
             >
                 {/* ===== TICKETS TAB ===== */}
                 {activeTab === 'tickets' && (
                     <>
                         {tickets.length === 0 ? (
                             <View className="items-center mt-20">
-                                <Ticket size={60} color="#D1D5DB" />
+                                <Ticket size={60} color="#BDD8DA" />
                                 <Text className="text-gray-400 text-lg mt-4 font-semibold">Chưa có vé nào</Text>
                                 <Text className="text-gray-400 text-sm mt-1">Hãy đặt vé cho sự kiện yêu thích!</Text>
                             </View>
@@ -188,7 +193,7 @@ export default function TicketsScreen() {
                                 const event = ticket.event_id as any;
                                 const statusStyle = getStatusColor(ticket.status);
                                 return (
-                                    <View key={ticket._id} className="bg-white rounded-2xl p-4 mb-4 border border-gray-100 shadow-sm">
+                                    <View key={ticket._id} className="bg-white rounded-2xl p-4 mb-5 border border-gray-100 shadow-sm">
                                         <View className="flex-row justify-between items-start mb-3">
                                             <View className="flex-1 mr-3">
                                                 <Text className="font-bold text-gray-900 text-base" numberOfLines={2}>
@@ -207,22 +212,22 @@ export default function TicketsScreen() {
 
                                         {event?.date_time && (
                                             <View className="flex-row items-center mb-1.5">
-                                                <CalendarDays size={14} color="#9CA3AF" />
+                                                <CalendarDays size={14} color="#FB96BB" />
                                                 <Text className="text-gray-500 text-xs ml-2">{formatDate(event.date_time)}</Text>
                                             </View>
                                         )}
                                         {event?.location?.name && (
                                             <View className="flex-row items-center mb-3">
-                                                <MapPin size={14} color="#9CA3AF" />
+                                                <MapPin size={14} color="#FB96BB" />
                                                 <Text className="text-gray-500 text-xs ml-2" numberOfLines={1}>{event.location.name}</Text>
                                             </View>
                                         )}
 
                                         {/* QR Code indicator */}
                                         {ticket.status === 'valid' && (
-                                            <View className="flex-row items-center bg-green-50 p-3 rounded-xl">
-                                                <QrCode size={18} color="#16A34A" />
-                                                <Text className="text-green-700 text-xs font-semibold ml-2 flex-1">
+                                            <View className="flex-row items-center bg-white border border-pink-200 p-3 rounded-xl">
+                                                <QrCode size={18} color="#FB96BB" />
+                                                <Text className="text-pink-700 text-xs font-semibold ml-2 flex-1">
                                                     QR: {ticket.qr_code_data.substring(0, 8)}...
                                                 </Text>
                                             </View>
@@ -245,7 +250,7 @@ export default function TicketsScreen() {
                     <>
                         {bookings.length === 0 ? (
                             <View className="items-center mt-20">
-                                <Ticket size={60} color="#D1D5DB" />
+                                <Ticket size={60} color="#BDD8DA" />
                                 <Text className="text-gray-400 text-lg mt-4 font-semibold">Chưa có đơn nào</Text>
                             </View>
                         ) : (
@@ -253,7 +258,7 @@ export default function TicketsScreen() {
                                 const event = booking.event_id as any;
                                 const paymentStyle = getPaymentStatusStyle(booking.payment_status);
                                 return (
-                                    <View key={booking._id} className="bg-white rounded-2xl p-4 mb-4 border border-gray-100 shadow-sm">
+                                    <View key={booking._id} className="bg-white rounded-2xl p-4 mb-5 border border-gray-100 shadow-sm">
                                         <View className="flex-row justify-between items-start mb-2">
                                             <View className="flex-1 mr-3">
                                                 <Text className="font-bold text-gray-900 text-base" numberOfLines={2}>
@@ -298,16 +303,16 @@ export default function TicketsScreen() {
                                                 {booking.payment_method === 'payos' && (
                                                     <>
                                                         <TouchableOpacity
-                                                            onPress={() => handleRetryPayment(booking)}
+                                                            onPress={() => handleOpenPaymentQr(booking)}
                                                             className="flex-1 py-2.5 bg-pink-500 rounded-xl"
                                                         >
-                                                            <Text className="text-white text-center font-bold text-sm">Thanh toán lại</Text>
+                                                            <Text className="text-white text-center font-bold text-sm">Xem QR</Text>
                                                         </TouchableOpacity>
                                                         <TouchableOpacity
                                                             onPress={() => handleConfirmPayment(booking._id)}
-                                                            className="flex-1 py-2.5 bg-green-500 rounded-xl"
+                                                            className="flex-1 py-2.5 bg-white border border-pink-300 rounded-xl"
                                                         >
-                                                            <Text className="text-white text-center font-bold text-sm">Đã thanh toán</Text>
+                                                            <Text className="text-pink-600 text-center font-bold text-sm">Đã thanh toán</Text>
                                                         </TouchableOpacity>
                                                     </>
                                                 )}
@@ -328,8 +333,45 @@ export default function TicketsScreen() {
                 )}
 
                 {/* Bottom spacer */}
-                <View className="h-20" />
+                <View className="h-28" />
             </ScrollView>
+
+            <Modal visible={qrModalVisible} transparent animationType="slide" onRequestClose={() => setQrModalVisible(false)}>
+                <View className="flex-1 bg-black/40 justify-end">
+                    <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10">
+                        <Text className="text-xl font-bold text-gray-900 text-center">QR thanh toan</Text>
+                        <Text className="text-gray-500 text-center mt-2">Quet QR va bam da thanh toan thanh cong.</Text>
+
+                        <View className="mt-5 mb-4 items-center">
+                            {selectedQrData ? (
+                                <Image source={{ uri: selectedQrData }} style={{ width: 220, height: 220 }} resizeMode="contain" />
+                            ) : (
+                                <View className="w-[220px] h-[220px] bg-gray-100 rounded-2xl items-center justify-center">
+                                    <Text className="text-gray-400">Khong co QR</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        <TouchableOpacity
+                            className="bg-pink-500 py-4 rounded-xl"
+                            onPress={async () => {
+                                const bookingId = selectedBookingId;
+                                setQrModalVisible(false);
+                                if (bookingId) {
+                                    await handleConfirmPayment(bookingId);
+                                }
+                            }}
+                        >
+                            <Text className="text-white text-center font-bold">Da thanh toan thanh cong</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity className="mt-3 py-3" onPress={() => setQrModalVisible(false)}>
+                            <Text className="text-center text-gray-500 font-semibold">Dong</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
+

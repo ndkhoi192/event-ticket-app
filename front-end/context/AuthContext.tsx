@@ -4,7 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 const getApiUrl = () => {
-    let url = process.env.EXPO_PUBLIC_API_URL || "http://172.16.0.15:3002/api";
+    // let url = process.env.EXPO_PUBLIC_API_URL || "http://172.16.0.15:3002/api";
+    let url = process.env.EXPO_PUBLIC_API_URL || "https://event-ticket-app-y706.onrender.com/api";
     console.log("Initial API URL:", url);
 
     // Handle localhost on Native platforms

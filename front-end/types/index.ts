@@ -60,11 +60,12 @@ export interface Booking {
     event_id: string | Event;
     items: BookingItem[];
     total_amount: number;
-    payment_method: 'payos' | 'cash' | 'free';
+    payment_method: 'payos' | 'cash';
     payment_status: 'pending' | 'paid' | 'refunded' | 'cancelled';
     transaction_id?: string;
     orderCode?: number;
     checkout_url?: string;
+    checkout_qr_data?: string;
     confirmed_by?: string;
     confirmed_at?: string;
     cancelled_reason?: string;

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Link, useFocusEffect, useRouter } from "expo-router";
-import { Plus } from "lucide-react-native";
+import { Plus, ScanLine } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from "react-native";
 import EventCard from "../../components/EventCard";
@@ -66,34 +66,40 @@ export default function DashboardScreen() {
     if (loading && !refreshing && events.length === 0) {
         return (
             <View className="flex-1 justify-center items-center bg-white">
-                <ActivityIndicator size="large" color="#FAA0A0" />
+                <ActivityIndicator size="large" color="#FB96BB" />
             </View>
         );
     }
 
     return (
-        <View className="flex-1 bg-gray-50 px-4 pt-12">
+        <View className="flex-1 bg-gray-50 px-5 pt-14">
             <View className="flex-row justify-between items-center mb-6">
                 <View>
                     <Text className="text-3xl font-bold text-gray-800">My Events</Text>
                     <Text className="text-gray-500">Manage your created events</Text>
                 </View>
-                {/* Placeholder for future Create Event functionality */}
-                <Link href="/(organizer)/events/create" asChild>
-                    <TouchableOpacity className="bg-pastel-pink p-3 rounded-full shadow-md">
-                        <Plus color="white" size={24} />
-                    </TouchableOpacity>
-                </Link>
+                <View className="flex-row space-x-3">
+                    <Link href="/(organizer)/scanner" asChild>
+                        <TouchableOpacity className="bg-pastel-blue p-3 rounded-full shadow-md mr-3">
+                            <ScanLine color="white" size={24} />
+                        </TouchableOpacity>
+                    </Link>
+                    <Link href="/(organizer)/events/create" asChild>
+                        <TouchableOpacity className="bg-pastel-pink p-3 rounded-full shadow-md">
+                            <Plus color="white" size={24} />
+                        </TouchableOpacity>
+                    </Link>
+                </View>
             </View>
 
             <FlatList
                 data={events}
                 keyExtractor={(item) => item._id}
                 renderItem={({ item }) => <EventCard event={item} />}
-                contentContainerStyle={{ paddingBottom: 20 }}
+                contentContainerStyle={{ paddingBottom: 120, paddingTop: 4 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FAA0A0" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FB96BB" />
                 }
                 ListEmptyComponent={
                     <View className="items-center justify-center mt-20">
@@ -105,3 +111,4 @@ export default function DashboardScreen() {
         </View>
     );
 }
+

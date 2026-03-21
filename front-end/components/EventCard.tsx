@@ -16,7 +16,7 @@ export default function EventCard({ event }: EventCardProps) {
     });
 
     const statusColor = {
-        published: "bg-green-100 text-green-700",
+        published: "bg-pink-100 text-pink-700",
         draft: "bg-gray-100 text-gray-700",
         cancelled: "bg-red-100 text-red-700",
     };
@@ -48,12 +48,12 @@ export default function EventCard({ event }: EventCardProps) {
                     </Text>
 
                     <View className="flex-row items-center mb-1">
-                        <Calendar size={14} color="#9CA3AF" />
+                        <Calendar size={14} color="#FB96BB" />
                         <Text className="text-gray-500 ml-2 text-sm">{date}</Text>
                     </View>
 
                     <View className="flex-row items-center">
-                        <MapPin size={14} color="#9CA3AF" />
+                        <MapPin size={14} color="#FB96BB" />
                         <Text className="text-gray-500 ml-2 text-sm truncate" numberOfLines={1}>
                             {event.location?.name || "TBA"}
                         </Text>
@@ -63,3 +63,4 @@ export default function EventCard({ event }: EventCardProps) {
         </Link>
     );
 }
+

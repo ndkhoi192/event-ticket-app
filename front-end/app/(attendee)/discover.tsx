@@ -56,18 +56,18 @@ export default function DiscoverScreen() {
     };
 
     return (
-        <View className="flex-1 bg-white pt-12 px-4">
+        <View className="flex-1 bg-gray-50 pt-14 px-5">
             {/* Header */}
-            <View className="mb-6">
+            <View className="mb-5">
                 <Text className="text-3xl font-bold text-gray-900 mb-4">Discover Events</Text>
 
                 <View className="flex-row items-center space-x-2">
                     <View className="flex-1 flex-row items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
-                        <Search color="#9CA3AF" size={20} />
+                        <Search color="#FB96BB" size={20} />
                         <TextInput
                             placeholder="Find amazing events..."
                             className="flex-1 ml-2 text-gray-700 font-medium"
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor="#FB96BB"
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                             onSubmitEditing={fetchEvents}
@@ -80,11 +80,11 @@ export default function DiscoverScreen() {
             </View>
 
             {/* Categories */}
-            <View className="mb-6 h-10">
+            <View className="mb-5 h-10">
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingRight: 20 }}
+                    contentContainerStyle={{ paddingRight: 20, paddingLeft: 2 }}
                 >
                     {categories.map((category) => (
                         <TouchableOpacity
@@ -109,7 +109,7 @@ export default function DiscoverScreen() {
             {/* Events List */}
             {loading && !refreshing ? (
                 <View className="flex-1 justify-center items-center">
-                    <ActivityIndicator size="large" color="#FAA0A0" />
+                    <ActivityIndicator size="large" color="#FB96BB" />
                 </View>
             ) : (
                 <FlatList
@@ -117,9 +117,9 @@ export default function DiscoverScreen() {
                     keyExtractor={(item) => item._id}
                     renderItem={({ item }) => <StandardEventCard event={item} />}
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 100 }}
+                    contentContainerStyle={{ paddingBottom: 128, paddingTop: 4 }}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FAA0A0" />
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FB96BB" />
                     }
                     ListEmptyComponent={
                         <View className="mt-20 items-center">
@@ -134,3 +134,4 @@ export default function DiscoverScreen() {
         </View>
     );
 }
+

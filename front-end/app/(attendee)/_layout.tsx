@@ -1,21 +1,28 @@
 import { Tabs } from "expo-router";
-import { Compass, Home, Search, Ticket, User } from "lucide-react-native";
-import { View } from "react-native";
+import { Compass, Home, Ticket, User } from "lucide-react-native";
 
 export default function AttendeeLayout() {
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: "#F472B6", // pastel-pink
-                tabBarInactiveTintColor: "#9CA3AF",
+                tabBarActiveTintColor: "#FB96BB", // pastel-pink
+                tabBarInactiveTintColor: "#FB96BB",
                 tabBarStyle: {
                     borderTopWidth: 0,
                     elevation: 0,
-                    height: 60,
-                    paddingBottom: 10,
+                    height: 74,
+                    paddingTop: 8,
+                    paddingBottom: 12,
+                    paddingHorizontal: 8,
+                    backgroundColor: "#FFFFFF",
+                },
+                tabBarLabelStyle: {
+                    fontSize: 12,
+                    fontWeight: "600",
                 },
                 headerShown: false,
                 tabBarShowLabel: true,
+                tabBarHideOnKeyboard: true,
             }}
         >
             <Tabs.Screen
@@ -30,20 +37,6 @@ export default function AttendeeLayout() {
                 options={{
                     title: "Discover",
                     tabBarIcon: ({ color }) => <Compass color={color} size={24} />,
-                }}
-            />
-
-            {/* Center Button Placeholder - could be a modal trip or something */}
-            <Tabs.Screen
-                name="center"
-                options={{
-                    title: "",
-                    tabBarIcon: () => (
-                        <View className="bg-pastel-pink h-14 w-14 rounded-full items-center justify-center -mt-8 shadow-lg">
-                            <Search color="white" size={28} />
-                        </View>
-                    ),
-                    href: "/(attendee)/discover", // Redirect to discover for now
                 }}
             />
 
@@ -63,13 +56,13 @@ export default function AttendeeLayout() {
             />
             {/* Hidden screens - accessible via navigation but not shown in tabs */}
             <Tabs.Screen
-                name="book"
+                name="book/[id]"
                 options={{
                     href: null,
                 }}
             />
             <Tabs.Screen
-                name="events"
+                name="events/[id]"
                 options={{
                     href: null,
                 }}
@@ -80,6 +73,13 @@ export default function AttendeeLayout() {
                     href: null,
                 }}
             />
+            <Tabs.Screen
+                name="edit-profile"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
     );
 }
+

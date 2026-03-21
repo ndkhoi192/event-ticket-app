@@ -3,7 +3,10 @@ import { Stack } from "expo-router";
 export default function AdminLayout() {
     return (
         <Stack>
-            <Stack.Screen name="admin-overview" options={{ title: "Admin Dashboard" }} />
+            <Stack.Screen name="admin-overview" options={{ headerShown: false }} />
+            <Stack.Screen name="users" options={{ headerShown: false }} />
+            <Stack.Screen name="categories" options={{ headerShown: false }} />
+            <Stack.Screen name="profile" options={{ headerShown: false }} />
         </Stack>
     );
 }

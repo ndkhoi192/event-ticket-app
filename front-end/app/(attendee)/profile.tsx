@@ -1,49 +1,75 @@
 import { useRouter } from "expo-router";
-import { Text, TouchableOpacity, View } from "react-native";
-import LogoutButton from "../../components/LogoutButton";
+import { ChevronRight } from "lucide-react-native";
+import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
 export default function ProfileScreen() {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const router = useRouter();
 
+    const openPlaceholder = (title: string) => {
+        Alert.alert(title, "This section is coming soon.");
+    };
+
+    const onLogout = async () => {
+        await logout();
+        router.replace("/(auth)/login");
+    };
+
+    const renderMenuItem = (label: string, onPress: () => void, isLast = false) => (
+        <TouchableOpacity
+            key={label}
+            onPress={onPress}
+            className={`flex-row items-center justify-between px-4 py-3 ${isLast ? "" : "border-b border-gray-200"}`}
+        >
+            <View className="flex-row items-center">
+                <Text className="text-gray-700 text-base mr-3">◇</Text>
+                <Text className="text-gray-800 font-medium text-[15px]">{label}</Text>
+            </View>
+            <ChevronRight size={18} color="#FB96BB" />
+        </TouchableOpacity>
+    );
+
     return (
-        <View className="flex-1 items-center bg-white pt-10 px-6">
-            <View className="h-24 w-24 bg-pastel-blue rounded-full items-center justify-center mb-4 shadow-sm">
-                <Text className="text-3xl font-bold text-white">
-                    {user?.full_name?.charAt(0).toUpperCase() || "U"}
-                </Text>
+        <View className="flex-1 bg-gray-100 pt-12 px-4 pb-8">
+            <View className="bg-white rounded-3xl p-4 flex-row items-center mb-6 border border-pink-200">
+                <View className="h-20 w-20 bg-pink-500 rounded-full items-center justify-center mr-4">
+                    <Text className="text-3xl font-bold text-white">
+                        {user?.full_name?.charAt(0).toUpperCase() || "U"}
+                    </Text>
+                </View>
+                <View className="flex-1">
+                    <Text className="text-xl font-bold text-gray-900" numberOfLines={1}>
+                        {user?.full_name || "User Name"}
+                    </Text>
+                    <Text className="text-gray-700 mt-1" numberOfLines={1}>{user?.email}</Text>
+                    <Text className="text-gray-600 mt-1 capitalize">{user?.role || "Attendee"}</Text>
+                </View>
             </View>
 
-            <Text className="text-2xl font-bold text-gray-800 mb-1">
-                {user?.full_name || "User Name"}
-            </Text>
-            <Text className="text-gray-500 text-base mb-2">{user?.email}</Text>
-            <View className="bg-blue-50 px-3 py-1 rounded-full mb-8">
-                <Text className="text-pastel-blue font-semibold capitalize">{user?.role || "Attendee"}</Text>
+            <Text className="text-gray-900 font-bold text-xl mb-3">Settings</Text>
+            <View className="bg-white rounded-2xl border border-gray-300 mb-5 overflow-hidden">
+                {renderMenuItem("Update Profile", () => router.push("/(attendee)/edit-profile"))}
+                {renderMenuItem("Change Password", () => openPlaceholder("Change Password"))}
+                {renderMenuItem("Saved Events", () => router.push("/(attendee)/saved-events"))}
+                {renderMenuItem("Subscription Center", () => openPlaceholder("Subscription Center"))}
+                {renderMenuItem("Payment & Invoices", () => openPlaceholder("Payment & Invoices"), true)}
             </View>
 
-            <View className="w-full space-y-4">
-                <TouchableOpacity
-                    className="w-full bg-gray-50 p-4 rounded-xl flex-row items-center justify-between"
-                    onPress={() => router.push("/(attendee)/saved-events")}
-                >
-                    <View className="flex-row items-center">
-                        <View className="w-10 h-10 bg-white rounded-full items-center justify-center mr-3 shadow-sm">
-                            <Text>❤️</Text>
-                        </View>
-                        <Text className="text-gray-700 font-semibold text-lg">Saved Events</Text>
-                    </View>
-                    <Text className="text-gray-400">→</Text>
-                </TouchableOpacity>
-
-                {/* Other profile options can go here */}
+            <Text className="text-gray-900 font-bold text-xl mb-3">Support</Text>
+            <View className="bg-white rounded-2xl border border-gray-300 mb-8 overflow-hidden">
+                {renderMenuItem("Help Center", () => openPlaceholder("Help Center"))}
+                {renderMenuItem("Terms of Service", () => openPlaceholder("Terms of Service"))}
+                {renderMenuItem("Privacy Policy", () => openPlaceholder("Privacy Policy"))}
+                {renderMenuItem("About", () => openPlaceholder("About"), true)}
             </View>
 
-            <View className="flex-1 w-full" />
-            {/* Spacer to push logout to bottom, though LogoutButton has mt-auto */}
-
-            <LogoutButton />
+            <TouchableOpacity
+                onPress={onLogout}
+                className="mt-auto py-3 rounded-full border-2 border-pink-300 bg-white"
+            >
+                <Text className="text-center text-pink-600 font-bold text-lg">Log out</Text>
+            </TouchableOpacity>
         </View>
     );
 }

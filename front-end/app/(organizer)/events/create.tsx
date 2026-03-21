@@ -180,7 +180,7 @@ export default function CreateEventScreen() {
                 {/* Header */}
                 <View className="flex-row items-center px-4 py-4 border-b border-gray-100 mt-8">
                     <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                        <ArrowLeft color="#374151" size={24} />
+                        <ArrowLeft color="#FB96BB" size={24} />
                     </TouchableOpacity>
                     <Text className="text-xl font-bold text-gray-800">Create New Event</Text>
                 </View>
@@ -196,7 +196,7 @@ export default function CreateEventScreen() {
                             <Image source={{ uri: banner }} className="w-full h-full" resizeMode="cover" />
                         ) : (
                             <View className="items-center">
-                                <Upload color="#9CA3AF" size={32} />
+                                <Upload color="#FB96BB" size={32} />
                                 <Text className="text-gray-500 mt-2">Upload Banner Image (16:9)</Text>
                             </View>
                         )}
@@ -237,7 +237,7 @@ export default function CreateEventScreen() {
                                 }}
                                 className="flex-row items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50"
                             >
-                                <Calendar color="#9CA3AF" size={20} />
+                                <Calendar color="#FB96BB" size={20} />
                                 <Text className="ml-3 text-gray-700">
                                     {date.toLocaleDateString()}
                                 </Text>
@@ -254,7 +254,7 @@ export default function CreateEventScreen() {
                                 }}
                                 className="flex-row items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50"
                             >
-                                <Clock color="#9CA3AF" size={20} />
+                                <Clock color="#FB96BB" size={20} />
                                 <Text className="ml-3 text-gray-700">
                                     {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </Text>
@@ -317,7 +317,7 @@ export default function CreateEventScreen() {
                             onPress={() => setShowMap(true)}
                             className="flex-row items-center justify-center border border-pastel-blue rounded-lg py-3 mt-2"
                         >
-                            <MapPin color="#A7C7E7" size={20} />
+                            <MapPin color="#FB96BB" size={20} />
                             <Text className="ml-2 text-pastel-blue font-bold">
                                 Select Location on Map
                             </Text>
@@ -357,7 +357,7 @@ export default function CreateEventScreen() {
                                     <Text className="text-gray-500 text-xs font-bold uppercase">Ticket #{index + 1}</Text>
                                     {index > 0 && (
                                         <TouchableOpacity onPress={() => removeTicketType(index)}>
-                                            <Trash2 size={16} color="#EF4444" />
+                                            <Trash2 size={16} color="#FB96BB" />
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -407,7 +407,7 @@ export default function CreateEventScreen() {
                 <SafeAreaView className="flex-1 bg-white">
                     <View className="p-4 flex-row items-center space-x-2 border-b border-gray-100">
                         <TouchableOpacity onPress={() => setShowMap(false)} className="mr-2">
-                            <ArrowLeft color="#374151" size={24} />
+                            <ArrowLeft color="#FB96BB" size={24} />
                         </TouchableOpacity>
                         <Text className="text-lg font-bold text-gray-800">Select Location</Text>
                     </View>
@@ -487,3 +487,4 @@ export default function CreateEventScreen() {
         </KeyboardAvoidingView>
     );
 }
+

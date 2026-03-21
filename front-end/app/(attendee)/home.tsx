@@ -41,15 +41,15 @@ export default function AttendeeHomeScreen() {
     if (loading) {
         return (
             <View className="flex-1 justify-center items-center bg-white">
-                <ActivityIndicator size="large" color="#A7C7E7" />
+                <ActivityIndicator size="large" color="#FB96BB" />
             </View>
         );
     }
 
     return (
-        <ScrollView className="flex-1 bg-white" showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 bg-gray-50" showsVerticalScrollIndicator={false}>
             {/* Header */}
-            <View className="bg-white pt-12 pb-4 px-6 fixed top-0 w-full z-10 shadow-sm border-b border-gray-100">
+            <View className="bg-white pt-14 pb-4 px-6 border-b border-gray-100">
                 <View className="flex-row justify-between items-center mb-4">
                     <View>
                         <Text className="text-gray-500 font-medium">Hello, {user?.full_name?.split(' ')[0] || 'Guest'}!</Text>
@@ -66,47 +66,10 @@ export default function AttendeeHomeScreen() {
                         </TouchableOpacity>
                     </Link>
                 </View>
-
-                {/* Search Bar */}
-                <View className="flex-row items-center bg-gray-50 rounded-full px-4 py-3 border border-gray-200">
-                    <Search color="#9CA3AF" size={20} />
-                    <TextInput
-                        placeholder="Search events, concerts..."
-                        className="flex-1 ml-2 text-gray-700 font-medium"
-                        placeholderTextColor="#9CA3AF"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        onSubmitEditing={() => router.push(`/(attendee)/discover?search=${searchQuery}`)}
-                    />
-                </View>
-            </View>
-
-            {/* Categories */}
-            <View className="mt-6 mb-6">
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24 }}>
-                    <TouchableOpacity className="mr-6 items-center">
-                        <View className="w-16 h-16 bg-pastel-pink rounded-2xl items-center justify-center shadow-sm mb-2">
-                            <Text className="text-white font-bold text-xs">ALL</Text>
-                        </View>
-                        <Text className="text-gray-600 text-xs font-medium">All</Text>
-                    </TouchableOpacity>
-
-                    {categories.map((category) => (
-                        <Link key={category._id} href={`/(attendee)/discover?category=${category._id}`} asChild>
-                            <TouchableOpacity className="mr-6 items-center">
-                                <View className="w-16 h-16 bg-blue-50 rounded-2xl items-center justify-center shadow-sm mb-2">
-                                    {/* Placeholder icon logic based on name or generic */}
-                                    <Text className="text-pastel-blue text-2xl">🎵</Text>
-                                </View>
-                                <Text className="text-gray-600 text-xs font-medium">{category.name}</Text>
-                            </TouchableOpacity>
-                        </Link>
-                    ))}
-                </ScrollView>
             </View>
 
             {/* Featured Events */}
-            <View className="mb-8">
+            <View className="mb-7 mt-3">
                 <View className="flex-row justify-between items-center px-6 mb-4">
                     <Text className="text-xl font-bold text-gray-900">Featured Events</Text>
                     <Link href="/(attendee)/discover" asChild>
@@ -129,7 +92,7 @@ export default function AttendeeHomeScreen() {
             </View>
 
             {/* Upcoming Near You */}
-            <View className="px-6 pb-20">
+            <View className="px-6 pb-28">
                 <Text className="text-xl font-bold text-gray-900 mb-4">Upcoming Near You</Text>
                 {upcomingEvents.map((event) => (
                     <StandardEventCard key={event._id} event={event} />
@@ -141,3 +104,4 @@ export default function AttendeeHomeScreen() {
         </ScrollView>
     );
 }
+

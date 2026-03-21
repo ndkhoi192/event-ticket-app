@@ -39,7 +39,7 @@ export default function SavedEventsScreen() {
     if (loading && !refreshing) {
         return (
             <View className="flex-1 justify-center items-center bg-white">
-                <ActivityIndicator size="large" color="#F472B6" />
+                <ActivityIndicator size="large" color="#FB96BB" />
             </View>
         );
     }
@@ -52,7 +52,7 @@ export default function SavedEventsScreen() {
                     className="mr-4 p-2 bg-gray-50 rounded-full"
                     onPress={() => router.back()}
                 >
-                    <ArrowLeft color="#374151" size={24} />
+                    <ArrowLeft color="#FB96BB" size={24} />
                 </TouchableOpacity>
                 <Text className="text-xl font-bold text-gray-900">Saved Events</Text>
             </View>
@@ -64,7 +64,7 @@ export default function SavedEventsScreen() {
                 contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F472B6" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FB96BB" />
                 }
                 ListEmptyComponent={
                     <View className="flex-1 justify-center items-center mt-20">
@@ -78,3 +78,4 @@ export default function SavedEventsScreen() {
         </View>
     );
 }
+

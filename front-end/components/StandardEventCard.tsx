@@ -37,7 +37,7 @@ export default function StandardEventCard({ event }: { event: Event }) {
                             {event.title}
                         </Text>
                         <View className="flex-row items-center mb-1">
-                            <MapPin size={14} color="#9CA3AF" />
+                            <MapPin size={14} color="#FB96BB" />
                             <Text className="text-gray-500 text-xs ml-1 flex-1" numberOfLines={1}>
                                 {event.location?.name || "TBA"}
                             </Text>
@@ -66,3 +66,4 @@ export default function StandardEventCard({ event }: { event: Event }) {
         </Link>
     );
 }
+

@@ -22,8 +22,9 @@ export default function LogoutButton() {
             onPress={handleLogout}
             className="flex-row items-center bg-red-100 px-6 py-3 rounded-full mt-auto mb-6"
         >
-            <LogOut size={20} color="#EF4444" />
+            <LogOut size={20} color="#FB96BB" />
             <Text className="ml-2 text-red-500 font-bold text-lg">Logout</Text>
         </TouchableOpacity>
     );
 }
+
