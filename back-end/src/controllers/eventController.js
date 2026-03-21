@@ -1,5 +1,14 @@
 const Event = require('../models/Event');
 const Category = require('../models/Category');
+const Booking = require('../models/Booking');
+
+const attachBannerUrl = (eventDoc, req) => {
+    const eventObj = eventDoc.toObject ? eventDoc.toObject() : eventDoc;
+    if (eventObj.banner_url && !eventObj.banner_url.startsWith('http')) {
+        eventObj.banner_url = `${req.protocol}://${req.get('host')}/${eventObj.banner_url}`;
+    }
+    return eventObj;
+};
 
 // Create a new event
 exports.createEvent = async (req, res) => {
@@ -96,6 +105,68 @@ exports.getAllEvents = async (req, res) => {
         });
 
         res.status(200).json(eventsWithUrl);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Get latest published events
+// Query: ?n=5 (default 5)
+exports.getLatestEvents = async (req, res) => {
+    try {
+        const limit = Math.max(parseInt(req.query.n, 10) || 5, 1);
+
+        const events = await Event.find({ status: 'published' })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .populate('organizer_id', 'full_name email')
+            .populate('category_id', 'name');
+
+        const eventsWithUrl = events.map((event) => attachBannerUrl(event, req));
+        res.status(200).json(eventsWithUrl);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Get hot published events by purchased ticket quantity
+// Query: ?n=5 (default 5)
+exports.getHotEvents = async (req, res) => {
+    try {
+        const limit = Math.max(parseInt(req.query.n, 10) || 5, 1);
+
+        const soldStats = await Booking.aggregate([
+            { $match: { payment_status: 'paid' } },
+            { $unwind: '$items' },
+            {
+                $group: {
+                    _id: '$event_id',
+                    tickets_sold: { $sum: '$items.quantity' }
+                }
+            },
+            { $sort: { tickets_sold: -1 } },
+            { $limit: limit }
+        ]);
+
+        const eventIds = soldStats.map((s) => s._id);
+        const soldMap = new Map(soldStats.map((s) => [String(s._id), s.tickets_sold]));
+
+        const hotEvents = await Event.find({
+            _id: { $in: eventIds },
+            status: 'published'
+        })
+            .populate('organizer_id', 'full_name email')
+            .populate('category_id', 'name');
+
+        const sortedHotEvents = hotEvents
+            .sort((a, b) => (soldMap.get(String(b._id)) || 0) - (soldMap.get(String(a._id)) || 0))
+            .slice(0, limit)
+            .map((event) => ({
+                ...attachBannerUrl(event, req),
+                tickets_sold: soldMap.get(String(event._id)) || 0
+            }));
+
+        res.status(200).json(sortedHotEvents);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
