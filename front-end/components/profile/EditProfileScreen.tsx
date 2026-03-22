@@ -21,6 +21,14 @@ export default function EditProfileScreen() {
     const { user, token, refreshUser } = useAuth();
     const router = useRouter();
 
+    type ProfilePath = "/(admin)/profile" | "/(organizer)/profile" | "/(attendee)/profile";
+    const profilePath: ProfilePath =
+        user?.role === "admin"
+            ? "/(admin)/profile"
+            : user?.role === "organizer"
+                ? "/(organizer)/profile"
+                : "/(attendee)/profile";
+
     const [fullName, setFullName] = useState(user?.full_name || "");
     const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || "");
     const [pickedImage, setPickedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -111,7 +119,7 @@ export default function EditProfileScreen() {
             );
 
             await refreshUser();
-            Alert.alert("Success", "Profile updated.", [{ text: "OK", onPress: () => router.back() }]);
+            Alert.alert("Success", "Profile updated.", [{ text: "OK", onPress: () => router.push(profilePath) }]);
         } catch (error: any) {
             console.error("Profile update failed:", error?.response?.data || error);
             Alert.alert("Error", error?.response?.data?.message || "Could not update profile.");
@@ -123,7 +131,7 @@ export default function EditProfileScreen() {
     return (
         <KeyboardAvoidingView className="flex-1 bg-white" behavior={Platform.OS === "ios" ? "padding" : "height"}>
             <View className="pt-12 pb-4 px-6 flex-row items-center border-b border-gray-100 mb-4">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
+                <TouchableOpacity onPress={() => router.push(profilePath)} className="mr-4 p-2 bg-gray-50 rounded-full">
                     <ArrowLeft color="#FB96BB" size={24} />
                 </TouchableOpacity>
                 <Text className="text-xl font-bold text-gray-900">Update Profile</Text>

@@ -27,7 +27,7 @@ export default function ProfileScreen() {
     );
 
     return (
-        <View className="flex-1 bg-gray-100 pt-12 px-4 pb-8">
+        <View className="flex-1 bg-gray-100 pt-12 px-4 pb-8 mt-5">
             <View className="bg-white rounded-3xl p-4 flex-row items-center mb-6 border border-pink-200">
                 <View className="h-20 w-20 bg-pink-500 rounded-full items-center justify-center mr-4">
                     {user?.avatar_url ? (

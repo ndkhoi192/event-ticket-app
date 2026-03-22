@@ -16,8 +16,16 @@ import {
 import { API_URL, useAuth } from "../../context/AuthContext";
 
 export default function ChangePasswordScreen() {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const router = useRouter();
+
+    type ProfilePath = "/(admin)/profile" | "/(organizer)/profile" | "/(attendee)/profile";
+    const profilePath: ProfilePath =
+        user?.role === "admin"
+            ? "/(admin)/profile"
+            : user?.role === "organizer"
+                ? "/(organizer)/profile"
+                : "/(attendee)/profile";
 
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -57,7 +65,7 @@ export default function ChangePasswordScreen() {
             setNewPassword("");
             setConfirmPassword("");
 
-            Alert.alert("Success", "Password changed successfully.", [{ text: "OK", onPress: () => router.back() }]);
+            Alert.alert("Success", "Password changed successfully.", [{ text: "OK", onPress: () => router.push(profilePath) }]);
         } catch (error: any) {
             console.error("Change password failed:", error?.response?.data || error);
             Alert.alert("Error", error?.response?.data?.message || "Could not change password.");
@@ -69,7 +77,7 @@ export default function ChangePasswordScreen() {
     return (
         <KeyboardAvoidingView className="flex-1 bg-white" behavior={Platform.OS === "ios" ? "padding" : "height"}>
             <View className="pt-12 pb-4 px-6 flex-row items-center border-b border-gray-100 mb-4">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
+                <TouchableOpacity onPress={() => router.push(profilePath)} className="mr-4 p-2 bg-gray-50 rounded-full">
                     <ArrowLeft color="#FB96BB" size={24} />
                 </TouchableOpacity>
                 <Text className="text-xl font-bold text-gray-900">Change Password</Text>

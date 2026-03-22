@@ -66,7 +66,7 @@ export default function SavedEventsScreen() {
             <View className="pt-12 pb-4 px-6 flex-row items-center border-b border-gray-100">
                 <TouchableOpacity
                     className="mr-4 p-2 bg-gray-50 rounded-full"
-                    onPress={() => router.back()}
+                    onPress={() => router.push("/(attendee)/profile")}
                 >
                     <ArrowLeft color="#FB96BB" size={24} />
                 </TouchableOpacity>
