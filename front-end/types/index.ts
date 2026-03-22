@@ -59,6 +59,11 @@ export interface Booking {
     user_id: string | User;
     event_id: string | Event;
     items: BookingItem[];
+    subtotal_amount?: number;
+    voucher_code?: string;
+    discount_type?: 'percentage' | 'fixed';
+    discount_value?: number;
+    discount_amount?: number;
     total_amount: number;
     payment_method: 'payos' | 'cash';
     payment_status: 'pending' | 'paid' | 'refunded' | 'cancelled';
@@ -71,6 +76,15 @@ export interface Booking {
     cancelled_reason?: string;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface VoucherValidationResult {
+    valid: boolean;
+    code: string;
+    discount_type: 'percentage' | 'fixed';
+    discount_value: number;
+    min_order_value: number;
+    event_id?: string | null;
 }
 
 export interface TicketItem {

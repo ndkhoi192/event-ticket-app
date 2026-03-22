@@ -88,8 +88,11 @@ exports.validateVoucher = async (req, res) => {
 
         res.json({
             valid: true,
+            code: voucher.code,
             discount_type: voucher.discount_type,
-            discount_value: voucher.discount_value
+            discount_value: voucher.discount_value,
+            min_order_value: voucher.min_order_value,
+            event_id: voucher.event_id || null,
         });
 
     } catch (error) {

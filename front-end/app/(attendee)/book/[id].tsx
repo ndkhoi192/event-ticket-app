@@ -2,10 +2,10 @@ import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, CreditCard, Minus, Plus, Ticket } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { io } from "socket.io-client";
 import { API_URL, useAuth } from "../../../context/AuthContext";
-import { Event, TicketType } from "../../../types";
+import { Event, TicketType, VoucherValidationResult } from "../../../types";
 
 export default function BookingScreen() {
   const { id } = useLocalSearchParams();
@@ -20,6 +20,9 @@ export default function BookingScreen() {
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [pendingBookingId, setPendingBookingId] = useState<string>("");
   const [checkoutQrData, setCheckoutQrData] = useState<string>("");
+  const [voucherCode, setVoucherCode] = useState("");
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [appliedVoucher, setAppliedVoucher] = useState<VoucherValidationResult | null>(null);
 
   const fetchEvent = React.useCallback(async () => {
     if (!eventId) return;
@@ -71,18 +74,19 @@ export default function BookingScreen() {
 
     socket.on("event:inventory-updated", (payload: { eventId?: string; ticketTypes?: TicketType[] }) => {
       if (payload?.eventId !== eventId || !Array.isArray(payload.ticketTypes)) return;
+      const ticketTypes = payload.ticketTypes;
 
       setEvent((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          ticket_types: payload.ticketTypes,
+          ticket_types: ticketTypes,
         };
       });
 
       setQuantities((prev) => {
         const next = { ...prev };
-        payload.ticketTypes.forEach((type) => {
+        ticketTypes.forEach((type) => {
           const current = next[type.type_name] || 0;
           if (current > type.remaining_quantity) {
             next[type.type_name] = Math.max(0, type.remaining_quantity);
@@ -146,6 +150,56 @@ export default function BookingScreen() {
     }, 0);
   };
 
+  const calculateDiscountAmount = (subtotal: number) => {
+    if (!appliedVoucher || subtotal <= 0) return 0;
+    if (subtotal < (appliedVoucher.min_order_value || 0)) return 0;
+
+    if (appliedVoucher.discount_type === "percentage") {
+      return Math.min(subtotal, Math.round((subtotal * Number(appliedVoucher.discount_value || 0)) / 100));
+    }
+
+    return Math.min(subtotal, Number(appliedVoucher.discount_value || 0));
+  };
+
+  const applyVoucher = async () => {
+    const code = voucherCode.trim().toUpperCase();
+    const subtotal = calculateTotal();
+
+    if (!code) {
+      Alert.alert("Voucher", "Please enter a voucher code.");
+      return;
+    }
+
+    if (!event?._id) {
+      Alert.alert("Voucher", "Event information is missing.");
+      return;
+    }
+
+    setApplyingVoucher(true);
+    try {
+      const response = await axios.post(`${API_URL}/vouchers/validate`, {
+        code,
+        event_id: event._id,
+        order_value: subtotal,
+      });
+
+      const result = response.data as VoucherValidationResult;
+      setAppliedVoucher(result);
+      setVoucherCode(result.code || code);
+
+      const discount = result.discount_type === "percentage"
+        ? Math.min(subtotal, Math.round((subtotal * Number(result.discount_value || 0)) / 100))
+        : Math.min(subtotal, Number(result.discount_value || 0));
+
+      Alert.alert("Voucher applied", `Discount: ${discount.toLocaleString("vi-VN")} VND`);
+    } catch (error: any) {
+      setAppliedVoucher(null);
+      Alert.alert("Voucher invalid", error?.response?.data?.message || "Could not apply voucher.");
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
   const confirmPayment = async (bookingId: string) => {
     setProcessing(true);
     try {
@@ -169,7 +223,9 @@ export default function BookingScreen() {
   };
 
   const handleCheckout = async () => {
-    const total = calculateTotal();
+    const subtotal = calculateTotal();
+    const discountAmount = calculateDiscountAmount(subtotal);
+    const total = Math.max(0, subtotal - discountAmount);
     const hasSelected = Object.values(quantities).some((q) => q > 0);
 
     if (!hasSelected) {
@@ -196,8 +252,8 @@ export default function BookingScreen() {
       const response = await axios.post(`${API_URL}/bookings`, {
         event_id: event?._id,
         items,
-        total_amount: total,
         payment_method: "payos",
+        voucher_code: appliedVoucher ? appliedVoucher.code : undefined,
       });
 
       const { booking, checkoutQrData, message } = response.data;
@@ -241,6 +297,8 @@ export default function BookingScreen() {
   }
 
   const total = calculateTotal();
+  const discountAmount = calculateDiscountAmount(total);
+  const finalTotal = Math.max(0, total - discountAmount);
   const hasSelected = Object.values(quantities).some((q) => q > 0);
   const totalRemaining = event.ticket_types.reduce((sum, t) => sum + (t.remaining_quantity || 0), 0);
   const isSoldOut = totalRemaining <= 0;
@@ -291,6 +349,35 @@ export default function BookingScreen() {
 
         {total > 0 && (
           <View className="mt-4 mb-6">
+            <Text className="text-lg font-bold text-gray-800 mb-3">Voucher</Text>
+            <View className="flex-row items-center mb-4">
+              <View className="flex-1 mr-2 border border-gray-200 rounded-xl bg-gray-50 px-4 py-3">
+                <Text className="text-xs text-gray-500 mb-1">Voucher code</Text>
+                <TextInput
+                  value={voucherCode}
+                  onChangeText={setVoucherCode}
+                  autoCapitalize="characters"
+                  placeholder="Enter code"
+                  className="text-gray-800 font-semibold"
+                />
+              </View>
+              <TouchableOpacity
+                className="px-4 py-3 rounded-xl bg-pastel-blue"
+                onPress={applyVoucher}
+                disabled={applyingVoucher || processing}
+              >
+                <Text className="text-white font-bold">{applyingVoucher ? "Applying..." : "Apply"}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {appliedVoucher && (
+              <View className="mb-4 p-3 rounded-xl border border-green-200 bg-green-50">
+                <Text className="text-green-700 font-semibold">
+                  Applied: {appliedVoucher.code} ({appliedVoucher.discount_type === "percentage" ? `${appliedVoucher.discount_value}%` : `${Number(appliedVoucher.discount_value || 0).toLocaleString("vi-VN")} VND`})
+                </Text>
+              </View>
+            )}
+
             <Text className="text-lg font-bold text-gray-800 mb-3">Payment method</Text>
 
             <View className="flex-row items-center p-4 rounded-xl border mb-3 border-pink-400 bg-pink-50">
@@ -314,13 +401,20 @@ export default function BookingScreen() {
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-gray-500 font-medium">Total</Text>
           <Text className="text-2xl font-bold text-pastel-pink">
-            {`${total.toLocaleString("vi-VN")} VND`}
+            {`${finalTotal.toLocaleString("vi-VN")} VND`}
           </Text>
         </View>
 
+        {discountAmount > 0 && (
+          <View className="flex-row justify-between items-center mb-3">
+            <Text className="text-green-600 font-medium">Discount</Text>
+            <Text className="text-green-600 font-bold">- {discountAmount.toLocaleString("vi-VN")} VND</Text>
+          </View>
+        )}
+
         <TouchableOpacity
           className={`py-4 rounded-2xl shadow-lg flex-row justify-center items-center ${processing ? "opacity-70" : ""} ${
-            !hasSelected || isSoldOut ? "bg-gray-300" : total === 0 ? "bg-pink-500" : "bg-pastel-blue"
+            !hasSelected || isSoldOut ? "bg-gray-300" : finalTotal === 0 ? "bg-pink-500" : "bg-pastel-blue"
           }`}
           onPress={handleCheckout}
           disabled={processing || !hasSelected || isSoldOut}
@@ -330,7 +424,7 @@ export default function BookingScreen() {
           ) : (
             <>
               <Text className="text-white font-bold text-lg mr-2">
-                {total === 0 ? "Book tickets" : "Proceed to QR payment"}
+                {finalTotal === 0 ? "Book tickets" : "Proceed to QR payment"}
               </Text>
               <Ticket color="white" size={20} />
             </>

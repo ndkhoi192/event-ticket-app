@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
+const Voucher = require('../models/Voucher');
 const Notification = require('../models/Notification');
 const crypto = require('crypto');
 const generateQR = require('../utils/generateQR');
@@ -193,7 +194,7 @@ const rollbackTicketQuantities = async (eventId, items) => {
 // ==========================================
 exports.createBooking = async (req, res) => {
     try {
-        const { event_id, items, total_amount, payment_method } = req.body;
+        const { event_id, items, payment_method, voucher_code } = req.body;
 
         if (!req.user || !req.user._id) {
             return res.status(401).json({ message: "User not authenticated" });
@@ -242,11 +243,48 @@ exports.createBooking = async (req, res) => {
             return res.status(400).json({ message: 'No tickets selected' });
         }
 
+        let appliedVoucherCode = null;
+        let appliedDiscountType = null;
+        let appliedDiscountValue = 0;
+        let discountAmount = 0;
+
+        if (voucher_code && String(voucher_code).trim()) {
+            const normalizedCode = String(voucher_code).trim().toUpperCase();
+            const voucher = await Voucher.findOne({ code: normalizedCode });
+
+            if (!voucher) {
+                return res.status(400).json({ message: 'Invalid voucher code' });
+            }
+
+            if (new Date() > voucher.expiry_date) {
+                return res.status(400).json({ message: 'Voucher expired' });
+            }
+
+            if (voucher.event_id && voucher.event_id.toString() !== event_id.toString()) {
+                return res.status(400).json({ message: 'Voucher not applicable for this event' });
+            }
+
+            if (calculatedTotal < voucher.min_order_value) {
+                return res.status(400).json({ message: `Minimum order value for this voucher is ${voucher.min_order_value}` });
+            }
+
+            if (voucher.discount_type === 'percentage') {
+                discountAmount = (calculatedTotal * Number(voucher.discount_value || 0)) / 100;
+            } else {
+                discountAmount = Number(voucher.discount_value || 0);
+            }
+
+            discountAmount = Math.max(0, Math.min(calculatedTotal, Math.round(discountAmount)));
+            appliedVoucherCode = voucher.code;
+            appliedDiscountType = voucher.discount_type;
+            appliedDiscountValue = Number(voucher.discount_value || 0);
+        }
+
         // Save updated event quantities
         await event.save();
         await emitEventInventory(event._id.toString());
 
-        const totalAmount = Math.max(0, Number.isFinite(Number(total_amount)) ? Number(total_amount) : calculatedTotal);
+        const totalAmount = Math.max(0, calculatedTotal - discountAmount);
         const isZeroAmount = totalAmount === 0 || calculatedTotal === 0;
 
         // Create booking
@@ -254,6 +292,11 @@ exports.createBooking = async (req, res) => {
             user_id,
             event_id,
             items,
+            subtotal_amount: calculatedTotal,
+            voucher_code: appliedVoucherCode,
+            discount_type: appliedDiscountType,
+            discount_value: appliedDiscountValue,
+            discount_amount: discountAmount,
             total_amount: totalAmount,
             payment_method: method,
             payment_status: isZeroAmount ? 'paid' : 'pending'

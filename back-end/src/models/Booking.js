@@ -25,6 +25,25 @@ const bookingSchema = new mongoose.Schema({
             required: true
         }
     }],
+    subtotal_amount: {
+        type: Number,
+        default: 0
+    },
+    voucher_code: {
+        type: String
+    },
+    discount_type: {
+        type: String,
+        enum: ['percentage', 'fixed']
+    },
+    discount_value: {
+        type: Number,
+        default: 0
+    },
+    discount_amount: {
+        type: Number,
+        default: 0
+    },
     total_amount: {
         type: Number,
         required: true
