@@ -158,10 +158,10 @@ export default function ProfileScreen() {
                 <Animated.View style={enterStyle(supportAnim)}>
                     <Text style={styles.sectionTitle}>Support</Text>
                     <View style={styles.sectionCard}>
-                        {renderMenuItem("Help Center", () => openPlaceholder("Help Center"))}
-                        {renderMenuItem("Terms of Service", () => openPlaceholder("Terms of Service"))}
-                        {renderMenuItem("Privacy Policy", () => openPlaceholder("Privacy Policy"))}
-                        {renderMenuItem("About", () => openPlaceholder("About"), true)}
+                        {renderMenuItem("Help Center", () => router.push({ pathname: "/support/help-center", params: { from: "admin-profile" } }))}
+                        {renderMenuItem("Terms of Service", () => router.push({ pathname: "/support/terms-of-service", params: { from: "admin-profile" } }))}
+                        {renderMenuItem("Privacy Policy", () => router.push({ pathname: "/support/privacy-policy", params: { from: "admin-profile" } }))}
+                        {renderMenuItem("About", () => router.push({ pathname: "/support/about", params: { from: "admin-profile" } }), true)}
                     </View>
                 </Animated.View>
 

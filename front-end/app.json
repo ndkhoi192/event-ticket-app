@@ -40,6 +40,12 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Event Ticket App to use your camera for QR ticket check-in."
+        }
+      ],
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

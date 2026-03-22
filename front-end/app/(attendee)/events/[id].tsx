@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, Heart, MapPin, Share2, Ticket } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { API_URL, useAuth } from "../../../context/AuthContext";
 import { Event } from "../../../types";
@@ -27,8 +27,9 @@ export default function EventDetailsScreen() {
     const [submittingReview, setSubmittingReview] = useState(false);
     const [rating, setRating] = useState<number>(5);
     const [comment, setComment] = useState<string>("");
+    const [hasPurchasedTicket, setHasPurchasedTicket] = useState(false);
 
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         if (!id) {
             return;
         }
@@ -41,7 +42,7 @@ export default function EventDetailsScreen() {
         } finally {
             setLoadingReviews(false);
         }
-    };
+    }, [id]);
 
     useEffect(() => {
         const fetchEventDetails = async () => {
@@ -60,7 +61,36 @@ export default function EventDetailsScreen() {
             fetchEventDetails();
             fetchReviews();
         }
-    }, [id]);
+    }, [id, fetchReviews]);
+
+    useEffect(() => {
+        const checkPurchasedTicket = async () => {
+            if (!id || !user) {
+                setHasPurchasedTicket(false);
+                return;
+            }
+
+            try {
+                const response = await axios.get(`${API_URL}/tickets`);
+                const userTickets = Array.isArray(response.data) ? response.data : [];
+                const eventId = Array.isArray(id) ? id[0] : id;
+
+                const purchased = userTickets.some((ticket: any) => {
+                    const ticketEventId = typeof ticket?.event_id === "string"
+                        ? ticket.event_id
+                        : ticket?.event_id?._id;
+                    return ticketEventId === eventId;
+                });
+
+                setHasPurchasedTicket(purchased);
+            } catch (error) {
+                console.error("Failed to check purchased ticket", error);
+                setHasPurchasedTicket(false);
+            }
+        };
+
+        checkPurchasedTicket();
+    }, [id, user]);
 
     const handleSubmitReview = async () => {
         if (!user) {
@@ -246,20 +276,6 @@ export default function EventDetailsScreen() {
                         {event.description}
                     </Text>
 
-                    {/* Organizer (Optional to show) */}
-                    <View className="flex-row items-center mb-8">
-                        <View className="w-12 h-12 bg-gray-200 rounded-full mr-3 border border-white shadow-sm" />
-                        <View>
-                            <Text className="text-gray-900 font-bold">
-                                {typeof event.organizer_id === 'object' ? event.organizer_id.full_name : "Organizer"}
-                            </Text>
-                            <Text className="text-gray-500 text-xs">Organizer</Text>
-                        </View>
-                        <TouchableOpacity className="ml-auto bg-gray-100 px-4 py-2 rounded-lg">
-                            <Text className="text-pastel-blue font-bold text-xs">Follow</Text>
-                        </TouchableOpacity>
-                    </View>
-
                     {/* Reviews */}
                     <View className="mb-8">
                         <View className="flex-row items-center justify-between mb-3">
@@ -269,32 +285,34 @@ export default function EventDetailsScreen() {
                             </Text>
                         </View>
 
-                        <View className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-4">
-                            <Text className="font-semibold text-gray-800 mb-2">Write your review</Text>
-                            <View className="flex-row mb-3">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <TouchableOpacity key={star} onPress={() => setRating(star)} className="mr-1">
-                                        <Text className={`text-xl ${star <= rating ? "text-yellow-500" : "text-gray-300"}`}>★</Text>
-                                    </TouchableOpacity>
-                                ))}
+                        {hasPurchasedTicket && (
+                            <View className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-4">
+                                <Text className="font-semibold text-gray-800 mb-2">Write your review</Text>
+                                <View className="flex-row mb-3">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <TouchableOpacity key={star} onPress={() => setRating(star)} className="mr-1">
+                                            <Text className={`text-xl ${star <= rating ? "text-yellow-500" : "text-gray-300"}`}>★</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <TextInput
+                                    className="bg-white border border-gray-200 rounded-lg px-3 py-3 text-gray-700"
+                                    placeholder="Share your experience"
+                                    value={comment}
+                                    onChangeText={setComment}
+                                    multiline
+                                />
+                                <TouchableOpacity
+                                    className={`mt-3 py-3 rounded-lg ${submittingReview ? "bg-gray-300" : "bg-pastel-blue"}`}
+                                    onPress={handleSubmitReview}
+                                    disabled={submittingReview}
+                                >
+                                    <Text className="text-center text-white font-bold">
+                                        {submittingReview ? "Submitting..." : "Submit review"}
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
-                            <TextInput
-                                className="bg-white border border-gray-200 rounded-lg px-3 py-3 text-gray-700"
-                                placeholder="Share your experience"
-                                value={comment}
-                                onChangeText={setComment}
-                                multiline
-                            />
-                            <TouchableOpacity
-                                className={`mt-3 py-3 rounded-lg ${submittingReview ? "bg-gray-300" : "bg-pastel-blue"}`}
-                                onPress={handleSubmitReview}
-                                disabled={submittingReview}
-                            >
-                                <Text className="text-center text-white font-bold">
-                                    {submittingReview ? "Submitting..." : "Submit review"}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        )}
 
                         {loadingReviews ? (
                             <View className="py-6 items-center">

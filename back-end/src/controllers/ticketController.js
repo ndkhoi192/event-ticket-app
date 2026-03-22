@@ -41,23 +41,47 @@ exports.validateTicket = async (req, res) => {
     try {
         const { qr_code_data } = req.body; // Scanner sends the unique string
 
-        const ticket = await Ticket.findOne({ qr_code_data }).populate('event_id');
+        if (!qr_code_data || !String(qr_code_data).trim()) {
+            return res.status(400).json({
+                valid: false,
+                code: 'INVALID_QR',
+                message: 'Invalid ticket code'
+            });
+        }
+
+        const normalizedCode = String(qr_code_data).trim();
+        const ticket = await Ticket.findOne({ qr_code_data: normalizedCode }).populate('event_id');
 
         if (!ticket) {
-            return res.status(404).json({ valid: false, message: 'Invalid Ticket' });
+            return res.status(404).json({
+                valid: false,
+                code: 'INVALID_QR',
+                message: 'Invalid ticket code'
+            });
         }
 
         // Check if event belongs to organizer (if not admin)
         if (req.user.role !== 'admin' && ticket.event_id.organizer_id.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ valid: false, message: 'Not authorized for this event' });
+            return res.status(403).json({ valid: false, code: 'FORBIDDEN', message: 'Not authorized for this event' });
         }
 
         if (ticket.status === 'used') {
-            return res.status(400).json({ valid: false, message: 'Ticket already used', check_in_at: ticket.check_in_at });
+            return res.status(409).json({
+                valid: false,
+                code: 'ALREADY_CHECKED_IN',
+                message: 'Ticket already checked in',
+                check_in_at: ticket.check_in_at,
+                ticket: {
+                    id: ticket._id,
+                    type: ticket.ticket_type,
+                    event: ticket.event_id?.title || '',
+                    status: ticket.status
+                }
+            });
         }
 
         if (ticket.status === 'expired') {
-            return res.status(400).json({ valid: false, message: 'Ticket expired' });
+            return res.status(400).json({ valid: false, code: 'TICKET_EXPIRED', message: 'Ticket expired' });
         }
 
         // Update status to used
@@ -67,12 +91,15 @@ exports.validateTicket = async (req, res) => {
 
         res.json({
             valid: true,
+            code: 'CHECKED_IN',
             message: 'Check-in successful',
             ticket: {
                 id: ticket._id,
                 user: ticket.user_id, // Could populate if needed
                 type: ticket.ticket_type,
-                event: ticket.event_id.title
+                event: ticket.event_id.title,
+                status: ticket.status,
+                check_in_at: ticket.check_in_at
             }
         });
 

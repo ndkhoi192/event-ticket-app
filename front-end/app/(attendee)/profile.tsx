@@ -58,10 +58,10 @@ export default function ProfileScreen() {
 
             <Text className="text-gray-900 font-bold text-xl mb-3">Support</Text>
             <View className="bg-white rounded-2xl border border-gray-300 mb-8 overflow-hidden">
-                {renderMenuItem("Help Center", () => openPlaceholder("Help Center"))}
-                {renderMenuItem("Terms of Service", () => openPlaceholder("Terms of Service"))}
-                {renderMenuItem("Privacy Policy", () => openPlaceholder("Privacy Policy"))}
-                {renderMenuItem("About", () => openPlaceholder("About"), true)}
+                {renderMenuItem("Help Center", () => router.push({ pathname: "/support/help-center", params: { from: "attendee-profile" } }))}
+                {renderMenuItem("Terms of Service", () => router.push({ pathname: "/support/terms-of-service", params: { from: "attendee-profile" } }))}
+                {renderMenuItem("Privacy Policy", () => router.push({ pathname: "/support/privacy-policy", params: { from: "attendee-profile" } }))}
+                {renderMenuItem("About", () => router.push({ pathname: "/support/about", params: { from: "attendee-profile" } }), true)}
             </View>
 
             <TouchableOpacity
