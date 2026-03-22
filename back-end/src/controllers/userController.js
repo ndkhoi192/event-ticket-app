@@ -140,6 +140,33 @@ exports.getSavedEvents = async (req, res) => {
     }
 };
 
+// @desc    Upload current user avatar
+// @route   POST /api/users/avatar
+// @access  Private
+exports.uploadAvatar = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No avatar image uploaded' });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const avatarUrl = req.file.path || req.file.secure_url;
+        user.avatar_url = avatarUrl;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Avatar uploaded successfully',
+            avatar_url: user.avatar_url,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Change current user password
 // @route   PUT /api/users/change-password
 // @access  Private

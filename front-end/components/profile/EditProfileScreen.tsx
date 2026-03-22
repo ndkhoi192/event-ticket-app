@@ -50,30 +50,27 @@ export default function EditProfileScreen() {
         if (Platform.OS === "web") {
             const response = await fetch(pickedImage.uri);
             const blob = await response.blob();
-            formData.append("image", blob, "avatar.jpg");
+            formData.append("avatar", blob, "avatar.jpg");
         } else {
-            formData.append("image", {
+            formData.append("avatar", {
                 uri: pickedImage.uri,
                 name: pickedImage.fileName || `avatar-${Date.now()}.jpg`,
                 type: pickedImage.mimeType || "image/jpeg",
             } as any);
         }
 
-        formData.append("folder", "event-ticket-app/avatars");
-
-        const uploadRes = await axios.post(`${API_URL}/cloudinary/test-upload`, formData, {
+        const uploadRes = await axios.post(`${API_URL}/users/avatar`, formData, {
             headers: {
                 ...authHeaders,
-                "Content-Type": "multipart/form-data",
             },
         });
 
-        const secureUrl = uploadRes?.data?.data?.secure_url;
-        if (!secureUrl) {
+        const uploadedAvatarUrl = uploadRes?.data?.avatar_url;
+        if (!uploadedAvatarUrl) {
             throw new Error("Could not upload avatar image");
         }
 
-        return secureUrl;
+        return uploadedAvatarUrl;
     };
 
     const handleSave = async () => {
@@ -89,7 +86,20 @@ export default function EditProfileScreen() {
 
         setLoading(true);
         try {
-            const uploadedAvatarUrl = await uploadAvatarIfNeeded();
+            let uploadedAvatarUrl = avatarUrl || user.avatar_url || "";
+
+            if (pickedImage) {
+                try {
+                    uploadedAvatarUrl = await uploadAvatarIfNeeded();
+                } catch (uploadError: any) {
+                    console.error("Avatar upload failed:", uploadError?.response?.data || uploadError);
+                    uploadedAvatarUrl = user.avatar_url || "";
+                    Alert.alert(
+                        "Warning",
+                        "Avatar upload failed due to network error. Profile info will still be updated without new avatar."
+                    );
+                }
+            }
 
             await axios.put(
                 `${API_URL}/users/${user._id}`,
