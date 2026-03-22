@@ -1,6 +1,7 @@
 ﻿import axios from "axios";
 import { CalendarDays, MapPin, QrCode, Ticket, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { io } from "socket.io-client";
 import {
     ActivityIndicator,
     Image,
@@ -11,10 +12,11 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { API_URL } from "../../context/AuthContext";
+import { API_URL, useAuth } from "../../context/AuthContext";
 import { TicketItem } from "../../types";
 
 export default function TicketsScreen() {
+    const { token, user } = useAuth();
     const [tickets, setTickets] = useState<TicketItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -36,6 +38,35 @@ export default function TicketsScreen() {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        if (!token || !user?._id) return;
+
+        const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
+        const socket = io(socketBaseUrl, {
+            auth: {
+                token,
+            },
+        });
+
+        socket.on("ticket:checked-in", (payload: { userId?: string }) => {
+            if (payload?.userId !== user._id) return;
+            fetchData();
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [token, user?._id, fetchData]);
+
+    useEffect(() => {
+        if (!selectedTicket) return;
+
+        const updatedTicket = tickets.find((ticket) => ticket._id === selectedTicket._id);
+        if (updatedTicket) {
+            setSelectedTicket(updatedTicket);
+        }
+    }, [tickets, selectedTicket]);
 
     const onRefresh = () => {
         setRefreshing(true);

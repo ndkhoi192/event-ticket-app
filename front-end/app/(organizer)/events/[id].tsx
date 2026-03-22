@@ -3,11 +3,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, CheckCircle, Clock, Edit, Folder, MapPin, Trash2, Users } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { io } from "socket.io-client";
 import { API_URL, useAuth } from "../../../context/AuthContext";
 import { Booking, Event } from "../../../types";
 
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams();
+  const eventId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
   const { token } = useAuth();
 
@@ -20,7 +22,7 @@ export default function EventDetailsScreen() {
   useEffect(() => {
     const fetchEventDetails = async () => {
       try {
-        const response = await axios.get(`${API_URL}/events/${id}`);
+        const response = await axios.get(`${API_URL}/events/${eventId}`);
         setEvent(response.data);
       } catch (error) {
         console.error("Failed to fetch event details:", error);
@@ -30,16 +32,16 @@ export default function EventDetailsScreen() {
       }
     };
 
-    if (id) {
+    if (eventId) {
       fetchEventDetails();
     }
-  }, [id]);
+  }, [eventId]);
 
   const fetchBookings = async () => {
     setLoadingBookings(true);
     try {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(`${API_URL}/bookings/event/${id}`, { headers });
+      const response = await axios.get(`${API_URL}/bookings/event/${eventId}`, { headers });
       setBookings(response.data);
       setShowBookings(true);
     } catch (error: any) {
@@ -49,6 +51,35 @@ export default function EventDetailsScreen() {
       setLoadingBookings(false);
     }
   };
+
+  useEffect(() => {
+    if (!eventId || !token) return;
+
+    const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
+    const socket = io(socketBaseUrl, {
+      auth: { token },
+    });
+
+    socket.emit("organizer:join-event", { eventId });
+
+    socket.on("event:stats-refresh", (payload: { eventId?: string }) => {
+      if (payload?.eventId !== eventId) return;
+      if (showBookings) {
+        fetchBookings();
+      }
+    });
+
+    socket.on("event:stats-updated", (payload: { eventId?: string }) => {
+      if (payload?.eventId !== eventId) return;
+      if (showBookings) {
+        fetchBookings();
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [eventId, token, showBookings]);
 
   const handleConfirmCash = (bookingId: string, userName: string) => {
     Alert.alert("Confirm cash payment", `Confirm that cash payment was received from ${userName}?`, [
@@ -217,6 +248,13 @@ export default function EventDetailsScreen() {
               <Text className="text-pink-600 font-bold ml-2">{showBookings ? "Refresh bookings" : "View bookings"}</Text>
             </>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="flex-row items-center justify-center bg-white py-4 rounded-xl border border-gray-200 mb-4"
+          onPress={() => router.push(`/(organizer)/events/live-stats/${event._id}` as any)}
+        >
+          <Text className="text-gray-700 font-bold">Open Live Stats</Text>
         </TouchableOpacity>
 
         {showBookings && (

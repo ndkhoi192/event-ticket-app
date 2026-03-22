@@ -3,13 +3,15 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, CreditCard, Minus, Plus, Ticket } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { io } from "socket.io-client";
 import { API_URL, useAuth } from "../../../context/AuthContext";
 import { Event, TicketType } from "../../../types";
 
 export default function BookingScreen() {
   const { id } = useLocalSearchParams();
+  const eventId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function BookingScreen() {
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const response = await axios.get(`${API_URL}/events/${id}`);
+        const response = await axios.get(`${API_URL}/events/${eventId}`);
         setEvent(response.data);
 
         const initialQuantities: { [key: string]: number } = {};
@@ -39,10 +41,59 @@ export default function BookingScreen() {
       }
     };
 
-    if (id) {
+    if (eventId) {
       fetchEvent();
     }
-  }, [id, router]);
+  }, [eventId, router]);
+
+  useEffect(() => {
+    if (!eventId || !token) return;
+
+    const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
+    const socket = io(socketBaseUrl, {
+      auth: { token },
+    });
+
+    socket.emit("attendee:join-event", { eventId });
+
+    socket.on("event:inventory-updated", (payload: { eventId?: string; ticketTypes?: TicketType[] }) => {
+      if (payload?.eventId !== eventId || !Array.isArray(payload.ticketTypes)) return;
+
+      setEvent((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          ticket_types: payload.ticketTypes,
+        };
+      });
+
+      setQuantities((prev) => {
+        const next = { ...prev };
+        payload.ticketTypes.forEach((type) => {
+          const current = next[type.type_name] || 0;
+          if (current > type.remaining_quantity) {
+            next[type.type_name] = Math.max(0, type.remaining_quantity);
+          }
+        });
+        return next;
+      });
+    });
+
+    socket.on("booking:status-updated", (payload: { bookingId?: string; paymentStatus?: string }) => {
+      if (!pendingBookingId || payload?.bookingId !== pendingBookingId) return;
+
+      if (payload?.paymentStatus === "paid") {
+        setQrModalVisible(false);
+        Alert.alert("Success", "Payment confirmed. Your tickets are ready.", [
+          { text: "View tickets", onPress: () => router.replace("/(attendee)/tickets") },
+        ]);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [eventId, token, pendingBookingId, router]);
 
   const updateQuantity = (typeName: string, delta: number) => {
     setQuantities((prev) => {
@@ -165,6 +216,8 @@ export default function BookingScreen() {
 
   const total = calculateTotal();
   const hasSelected = Object.values(quantities).some((q) => q > 0);
+  const totalRemaining = event.ticket_types.reduce((sum, t) => sum + (t.remaining_quantity || 0), 0);
+  const isSoldOut = totalRemaining <= 0;
 
   return (
     <View className="flex-1 bg-white">
@@ -179,6 +232,12 @@ export default function BookingScreen() {
 
       <ScrollView className="flex-1 px-6 pt-6">
         <Text className="text-lg font-bold text-gray-800 mb-4">Choose ticket types</Text>
+
+        {isSoldOut && (
+          <View className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3">
+            <Text className="text-red-600 font-semibold text-center">Sold out on all devices in real time.</Text>
+          </View>
+        )}
 
         {event.ticket_types.map((type) => (
           <View
@@ -235,10 +294,10 @@ export default function BookingScreen() {
 
         <TouchableOpacity
           className={`py-4 rounded-2xl shadow-lg flex-row justify-center items-center ${processing ? "opacity-70" : ""} ${
-            !hasSelected ? "bg-gray-300" : total === 0 ? "bg-pink-500" : "bg-pastel-blue"
+            !hasSelected || isSoldOut ? "bg-gray-300" : total === 0 ? "bg-pink-500" : "bg-pastel-blue"
           }`}
           onPress={handleCheckout}
-          disabled={processing || !hasSelected}
+          disabled={processing || !hasSelected || isSoldOut}
         >
           {processing ? (
             <ActivityIndicator color="white" />

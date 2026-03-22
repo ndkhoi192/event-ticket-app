@@ -3,8 +3,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, Heart, MapPin, Share2, Ticket } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { io } from "socket.io-client";
 import { API_URL, useAuth } from "../../../context/AuthContext";
-import { Event } from "../../../types";
+import { Event, TicketType } from "../../../types";
 
 type ReviewItem = {
     _id: string;
@@ -18,8 +19,9 @@ type ReviewItem = {
 
 export default function EventDetailsScreen() {
     const { id } = useLocalSearchParams();
+    const eventId = Array.isArray(id) ? id[0] : id;
     const router = useRouter();
-    const { user, refreshUser } = useAuth();
+    const { user, token, refreshUser } = useAuth();
     const [event, setEvent] = useState<Event | null>(null);
     const [reviews, setReviews] = useState<ReviewItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ export default function EventDetailsScreen() {
     useEffect(() => {
         const fetchEventDetails = async () => {
             try {
-                const response = await axios.get(`${API_URL}/events/${id}`);
+                const response = await axios.get(`${API_URL}/events/${eventId}`);
                 setEvent(response.data);
             } catch (error) {
                 console.error("Failed to fetch event details:", error);
@@ -57,15 +59,15 @@ export default function EventDetailsScreen() {
             }
         };
 
-        if (id) {
+        if (eventId) {
             fetchEventDetails();
             fetchReviews();
         }
-    }, [id, fetchReviews]);
+    }, [eventId, fetchReviews]);
 
     useEffect(() => {
         const checkPurchasedTicket = async () => {
-            if (!id || !user) {
+            if (!eventId || !user) {
                 setHasPurchasedTicket(false);
                 return;
             }
@@ -73,8 +75,6 @@ export default function EventDetailsScreen() {
             try {
                 const response = await axios.get(`${API_URL}/tickets`);
                 const userTickets = Array.isArray(response.data) ? response.data : [];
-                const eventId = Array.isArray(id) ? id[0] : id;
-
                 const purchased = userTickets.some((ticket: any) => {
                     const ticketEventId = typeof ticket?.event_id === "string"
                         ? ticket.event_id
@@ -90,7 +90,33 @@ export default function EventDetailsScreen() {
         };
 
         checkPurchasedTicket();
-    }, [id, user]);
+    }, [eventId, user]);
+
+    useEffect(() => {
+        if (!eventId || !token) return;
+
+        const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
+        const socket = io(socketBaseUrl, {
+            auth: { token },
+        });
+
+        socket.emit("attendee:join-event", { eventId });
+
+        socket.on("event:inventory-updated", (payload: { eventId?: string; ticketTypes?: TicketType[] }) => {
+            if (payload?.eventId !== eventId || !Array.isArray(payload.ticketTypes)) return;
+            setEvent((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    ticket_types: payload.ticketTypes || [],
+                };
+            });
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [eventId, token]);
 
     const handleSubmitReview = async () => {
         if (!user) {
@@ -161,6 +187,8 @@ export default function EventDetailsScreen() {
         : null;
 
     const isSaved = user?.saved_events?.includes(event._id);
+    const totalRemaining = event.ticket_types.reduce((sum, t) => sum + (t.remaining_quantity || 0), 0);
+    const isSoldOut = totalRemaining <= 0;
 
     const toggleSave = async () => {
         if (!user) {
@@ -353,11 +381,31 @@ export default function EventDetailsScreen() {
                 </View>
 
                 <TouchableOpacity
-                    className="bg-pastel-blue px-8 py-4 rounded-2xl shadow-lg flex-row items-center"
-                    onPress={() => router.push({ pathname: "/(attendee)/book/[id]", params: { id: Array.isArray(id) ? id[0] : id } })}
+                    className={`px-8 py-4 rounded-2xl shadow-lg flex-row items-center ${isSoldOut ? "bg-gray-300" : "bg-pastel-blue"}`}
+                    onPress={() => router.push({ pathname: "/(attendee)/book/[id]", params: { id: eventId } })}
+                    disabled={isSoldOut}
                 >
-                    <Text className="text-white font-bold text-lg mr-2">Book now</Text>
+                    <Text className="text-white font-bold text-lg mr-2">{isSoldOut ? "Sold Out" : "Book now"}</Text>
                     <Ticket color="white" size={20} />
+                </TouchableOpacity>
+            </View>
+
+            <View className="absolute bottom-[86px] w-full px-6">
+                <TouchableOpacity
+                    className="bg-white py-3 rounded-2xl border border-gray-200"
+                    onPress={() => {
+                        if (!user) {
+                            Alert.alert("Login Required", "Please login to join the waiting room.", [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Login", onPress: () => router.push("/(auth)/login") },
+                            ]);
+                            return;
+                        }
+
+                        router.push({ pathname: "/(attendee)/queue/[id]", params: { id: eventId } });
+                    }}
+                >
+                    <Text className="text-center text-gray-700 font-semibold">Join waiting room</Text>
                 </TouchableOpacity>
             </View>
         </View>

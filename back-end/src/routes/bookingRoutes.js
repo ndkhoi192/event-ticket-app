@@ -9,7 +9,8 @@ const {
     payosWebhook,
     getBookingsByEvent,
     getAllBookings,
-    getBookingStats
+    getBookingStats,
+    getEventLiveStats
 } = require('../controllers/bookingController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
@@ -32,6 +33,9 @@ router.get('/event/:eventId', authorize('organizer', 'admin'), getBookingsByEven
 
 // Organizer/Admin: get stats for a specific event
 router.get('/stats/:eventId', authorize('organizer', 'admin'), getBookingStats);
+
+// Organizer/Admin: get live stats payload for a specific event
+router.get('/live-stats/:eventId', authorize('organizer', 'admin'), getEventLiveStats);
 
 // Single booking
 router.route('/:id')

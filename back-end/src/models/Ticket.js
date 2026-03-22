@@ -32,6 +32,9 @@ const ticketSchema = new mongoose.Schema({
     },
     check_in_at: {
         type: Date
+    },
+    check_in_gate: {
+        type: String
     }
 }, { timestamps: true });
 

@@ -5,6 +5,7 @@ const Event = require('../models/Event');
 const Notification = require('../models/Notification');
 const crypto = require('crypto');
 const generateQR = require('../utils/generateQR');
+const { getIO } = require('../socket');
 
 // Helper: Generate tickets for a booking
 const generateTickets = async (booking) => {
@@ -48,6 +49,143 @@ const createNotification = async (userId, title, content, type = 'payment_succes
         });
     } catch (err) {
         console.error("Failed to create notification:", err);
+    }
+};
+
+const buildEventLiveStats = async (eventId) => {
+    const eventObjectId = new mongoose.Types.ObjectId(eventId);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    const bookingStats = await Booking.aggregate([
+        { $match: { event_id: eventObjectId } },
+        {
+            $group: {
+                _id: '$payment_status',
+                count: { $sum: 1 },
+                totalAmount: { $sum: '$total_amount' }
+            }
+        }
+    ]);
+
+    const paidTicketQuantity = await Booking.aggregate([
+        { $match: { event_id: eventObjectId, payment_status: 'paid' } },
+        { $unwind: '$items' },
+        {
+            $group: {
+                _id: null,
+                quantity: { $sum: '$items.quantity' }
+            }
+        }
+    ]);
+
+    const ticketStatusStats = await Ticket.aggregate([
+        { $match: { event_id: eventObjectId } },
+        {
+            $group: {
+                _id: '$status',
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    const recentSales = await Booking.aggregate([
+        {
+            $match: {
+                event_id: eventObjectId,
+                payment_status: 'paid',
+                createdAt: { $gte: fiveMinutesAgo },
+            }
+        },
+        { $unwind: '$items' },
+        {
+            $group: {
+                _id: null,
+                quantity: { $sum: '$items.quantity' }
+            }
+        }
+    ]);
+
+    const gateLoads = await Ticket.aggregate([
+        {
+            $match: {
+                event_id: eventObjectId,
+                status: 'used',
+                check_in_at: { $gte: fiveMinutesAgo },
+                check_in_gate: { $nin: [null, ''] },
+            }
+        },
+        {
+            $group: {
+                _id: '$check_in_gate',
+                scans: { $sum: 1 }
+            }
+        },
+        { $sort: { scans: -1 } }
+    ]);
+
+    const bookingMap = new Map(bookingStats.map((item) => [item._id, item]));
+    const ticketMap = new Map(ticketStatusStats.map((item) => [item._id, item.count]));
+
+    return {
+        eventId,
+        totalBookings: bookingStats.reduce((sum, item) => sum + item.count, 0),
+        paidBookings: bookingMap.get('paid')?.count || 0,
+        pendingBookings: bookingMap.get('pending')?.count || 0,
+        refundedBookings: bookingMap.get('refunded')?.count || 0,
+        cancelledBookings: bookingMap.get('cancelled')?.count || 0,
+        totalRevenue: bookingMap.get('paid')?.totalAmount || 0,
+        ticketsSold: paidTicketQuantity[0]?.quantity || 0,
+        ticketsCheckedIn: ticketMap.get('used') || 0,
+        ticketsValid: ticketMap.get('valid') || 0,
+        ticketsExpired: ticketMap.get('expired') || 0,
+        salesPerMinute: Number(((recentSales[0]?.quantity || 0) / 5).toFixed(2)),
+        busiestGate: gateLoads[0]?._id || null,
+        busiestGateScansPer5m: gateLoads[0]?.scans || 0,
+        gateLoads,
+        updatedAt: new Date().toISOString(),
+    };
+};
+
+const emitEventLiveStats = async (eventId) => {
+    try {
+        const io = getIO();
+        const stats = await buildEventLiveStats(eventId);
+        io.to(`event:${eventId}`).emit('event:stats-updated', stats);
+    } catch (error) {
+        console.error('Emit live stats failed:', error.message);
+    }
+};
+
+const emitEventInventory = async (eventId) => {
+    try {
+        const io = getIO();
+        const event = await Event.findById(eventId).select('ticket_types');
+        if (!event) return;
+
+        const remaining = event.ticket_types.reduce((sum, type) => sum + (type.remaining_quantity || 0), 0);
+        io.to(`event:${eventId}`).emit('event:inventory-updated', {
+            eventId,
+            soldOut: remaining <= 0,
+            remaining,
+            ticketTypes: event.ticket_types,
+            updatedAt: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('Emit event inventory failed:', error.message);
+    }
+};
+
+const emitBookingStatusUpdate = async (booking) => {
+    try {
+        const io = getIO();
+        io.to(`user:${booking.user_id.toString()}`).emit('booking:status-updated', {
+            bookingId: booking._id.toString(),
+            eventId: booking.event_id.toString(),
+            paymentStatus: booking.payment_status,
+            updatedAt: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('Emit booking status failed:', error.message);
     }
 };
 
@@ -127,6 +265,7 @@ exports.createBooking = async (req, res) => {
 
         // Save updated event quantities
         await event.save();
+        await emitEventInventory(event._id.toString());
 
         const totalAmount = Math.max(0, Number.isFinite(Number(total_amount)) ? Number(total_amount) : calculatedTotal);
         const isZeroAmount = totalAmount === 0 || calculatedTotal === 0;
@@ -156,6 +295,8 @@ exports.createBooking = async (req, res) => {
                 `Bạn đã đặt ${totalTickets} vé cho sự kiện "${event.title}".`
             );
 
+            await emitEventLiveStats(savedBooking.event_id.toString());
+
             return res.status(201).json({
                 booking: savedBooking,
                 tickets,
@@ -174,6 +315,8 @@ exports.createBooking = async (req, res) => {
                 'Đặt vé thành công - Chờ thanh toán',
                 `Bạn đã đặt ${totalTickets} vé cho sự kiện "${event.title}". Vui lòng thanh toán tiền mặt tại quầy.`
             );
+
+            await emitEventLiveStats(savedBooking.event_id.toString());
 
             return res.status(201).json({
                 booking: savedBooking,
@@ -207,6 +350,8 @@ exports.createBooking = async (req, res) => {
             checkoutQrData: savedBooking.checkout_qr_data,
             message: 'Booking created. Scan QR and tap confirm payment when done.'
         });
+
+        await emitEventLiveStats(savedBooking.event_id.toString());
 
     } catch (err) {
         console.error("Booking Controller Error:", err);
@@ -246,6 +391,7 @@ exports.confirmPayment = async (req, res) => {
             booking.payment_status = 'paid';
             booking.transaction_id = booking.transaction_id || `FAKE-${Date.now()}`;
             await booking.save();
+            await emitBookingStatusUpdate(booking);
 
         } else if (booking.payment_method === 'cash') {
             // Cash confirmation requires organizer/admin
@@ -256,6 +402,7 @@ exports.confirmPayment = async (req, res) => {
             booking.confirmed_by = req.user._id;
             booking.confirmed_at = new Date();
             await booking.save();
+            await emitBookingStatusUpdate(booking);
         }
 
         // Generate tickets
@@ -268,6 +415,8 @@ exports.confirmPayment = async (req, res) => {
             'Thanh toán thành công!',
             `Vé cho sự kiện "${event?.title || 'N/A'}" đã được xác nhận. Bạn có ${tickets.length} vé.`
         );
+
+        await emitEventLiveStats(booking.event_id.toString());
 
         res.json({ message: 'Payment confirmed', booking, tickets });
 
@@ -308,6 +457,7 @@ exports.payosWebhook = async (req, res) => {
             booking.payment_status = 'paid';
             booking.transaction_id = req.body.data?.transactionId || '';
             await booking.save();
+            await emitBookingStatusUpdate(booking);
 
             // Generate tickets
             await getOrCreateTickets(booking);
@@ -319,6 +469,8 @@ exports.payosWebhook = async (req, res) => {
                 'Thanh toán thành công!',
                 `Thanh toán cho sự kiện "${event?.title || 'N/A'}" đã được xác nhận.`
             );
+
+            await emitEventLiveStats(booking.event_id.toString());
         }
 
         res.status(200).json({ message: 'Webhook processed' });
@@ -463,6 +615,8 @@ exports.cancelBooking = async (req, res) => {
         // Restore event quantities
         await rollbackTicketQuantities(booking.event_id, booking.items);
 
+        await emitEventInventory(booking.event_id.toString());
+
         // Update booking status
         if (booking.payment_status === 'paid') {
             booking.payment_status = 'refunded';
@@ -483,6 +637,8 @@ exports.cancelBooking = async (req, res) => {
             `Đơn đặt vé cho sự kiện "${event?.title || 'N/A'}" đã được hủy.`,
             'system'
         );
+
+        await emitEventLiveStats(booking.event_id.toString());
 
         res.json({ message: 'Booking cancelled successfully', booking });
 
@@ -550,5 +706,31 @@ exports.getBookingStats = async (req, res) => {
 
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+};
+
+// ==========================================
+// @desc    Get live stats for an event
+// @route   GET /api/bookings/live-stats/:eventId
+// @access  Private (Organizer/Admin)
+// ==========================================
+exports.getEventLiveStats = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (event.organizer_id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const stats = await buildEventLiveStats(req.params.eventId);
+        return res.json({
+            event: { _id: event._id, title: event.title },
+            ...stats,
+        });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
     }
 };

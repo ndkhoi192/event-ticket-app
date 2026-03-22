@@ -1,13 +1,16 @@
 const express = require('express');
+const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const { initSocket } = require('./socket');
 dotenv.config();
 
 
 const app = express();
+const httpServer = http.createServer(app);
 
 app.use(cors());
 app.use(express.json());
@@ -31,6 +34,7 @@ const ticketRoutes = require('./routes/ticketRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const cloudinaryRoutes = require('./routes/cloudinaryRoutes');
+const queueRoutes = require('./routes/queueRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -42,6 +46,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/cloudinary', cloudinaryRoutes);
+app.use('/api/queue', queueRoutes);
 
 
 app.get('/', (req, res) => {
@@ -52,7 +57,9 @@ const PORT = process.env.PORT || 5000;
 
 connectDB()
     .then(() => {
-        app.listen(PORT, () => {
+        initSocket(httpServer);
+
+        httpServer.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
             console.log(`Test URL: http://localhost:${PORT}`);
         });

@@ -1,4 +1,5 @@
 const Ticket = require('../models/Ticket');
+const { getIO } = require('../socket');
 
 // @desc    Get my tickets
 // @route   GET /api/tickets
@@ -39,7 +40,7 @@ exports.getTicketById = async (req, res) => {
 // @access  Private (Organizer/Admin)
 exports.validateTicket = async (req, res) => {
     try {
-        const { qr_code_data } = req.body; // Scanner sends the unique string
+        const { qr_code_data, gate_id } = req.body; // Scanner sends the unique string
 
         if (!qr_code_data || !String(qr_code_data).trim()) {
             return res.status(400).json({
@@ -66,6 +67,42 @@ exports.validateTicket = async (req, res) => {
         }
 
         if (ticket.status === 'used') {
+            const now = Date.now();
+            const checkedAt = ticket.check_in_at ? new Date(ticket.check_in_at).getTime() : 0;
+            const secondsSinceCheckIn = checkedAt > 0 ? (now - checkedAt) / 1000 : null;
+            const isPotentialFraud = Boolean(
+                gate_id &&
+                ticket.check_in_gate &&
+                ticket.check_in_gate !== gate_id &&
+                secondsSinceCheckIn !== null &&
+                secondsSinceCheckIn <= 5
+            );
+
+            if (isPotentialFraud) {
+                try {
+                    const io = getIO();
+                    io.to(`organizer:${ticket.event_id.organizer_id.toString()}`).emit('fraud:alert', {
+                        type: 'duplicate-qr-scan',
+                        ticketId: ticket._id.toString(),
+                        qrCodeData: ticket.qr_code_data,
+                        eventId: ticket.event_id?._id?.toString() || '',
+                        scannedGate: gate_id,
+                        originalGate: ticket.check_in_gate,
+                        firstCheckInAt: ticket.check_in_at,
+                        triggeredAt: new Date().toISOString(),
+                    });
+                } catch (socketError) {
+                    console.error('Fraud alert emit failed:', socketError.message);
+                }
+
+                return res.status(409).json({
+                    valid: false,
+                    code: 'FRAUD_SUSPECT',
+                    message: `Ticket was already checked in ${Math.max(0, Math.round(secondsSinceCheckIn || 0))}s ago at ${ticket.check_in_gate}.`,
+                    check_in_at: ticket.check_in_at,
+                });
+            }
+
             return res.status(409).json({
                 valid: false,
                 code: 'ALREADY_CHECKED_IN',
@@ -87,7 +124,26 @@ exports.validateTicket = async (req, res) => {
         // Update status to used
         ticket.status = 'used';
         ticket.check_in_at = new Date();
+        ticket.check_in_gate = gate_id || 'unknown';
         await ticket.save();
+
+        try {
+            const io = getIO();
+            io.to(`user:${ticket.user_id.toString()}`).emit('ticket:checked-in', {
+                userId: ticket.user_id.toString(),
+                ticketId: ticket._id.toString(),
+                eventId: ticket.event_id?._id?.toString() || '',
+                status: ticket.status,
+                checkInAt: ticket.check_in_at,
+            });
+
+            io.to(`event:${ticket.event_id?._id?.toString() || ticket.event_id.toString()}`).emit('event:stats-refresh', {
+                eventId: ticket.event_id?._id?.toString() || ticket.event_id.toString(),
+                reason: 'ticket-checked-in',
+            });
+        } catch (socketError) {
+            console.error('Socket emit failed:', socketError.message);
+        }
 
         res.json({
             valid: true,
