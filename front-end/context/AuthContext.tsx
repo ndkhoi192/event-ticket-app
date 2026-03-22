@@ -1,23 +1,30 @@
 import axios from "axios";
+import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 const getApiUrl = () => {
-    // let url = process.env.EXPO_PUBLIC_API_URL || "http://172.16.0.15:3002/api";
     let url = process.env.EXPO_PUBLIC_API_URL || "https://event-ticket-app-y706.onrender.com/api";
     console.log("Initial API URL:", url);
 
-    // Handle localhost on Native platforms
-    if (Platform.OS !== "web" && url.includes("localhost")) {
-        if (Platform.OS === "android") {
-            url = url.replace("localhost", "10.0.2.2");
-        } else {
-            // For iOS physical device or simulator wanting to hit host
-            url = url.replace("localhost", "172.16.0.15");
+    // Handle localhost on Native platforms without hard-coding a LAN IP.
+    if (Platform.OS !== "web" && /(localhost|127\.0\.0\.1)/.test(url)) {
+        const hostUri =
+            (Constants as any)?.expoConfig?.hostUri ||
+            (Constants as any)?.manifest2?.extra?.expoClient?.hostUri ||
+            (Constants as any)?.manifest?.debuggerHost;
+        const devHost = typeof hostUri === "string" ? hostUri.split(":")[0] : null;
+
+        if (devHost && devHost !== "localhost" && devHost !== "127.0.0.1") {
+            url = url.replace(/localhost|127\.0\.0\.1/g, devHost);
+        } else if (Platform.OS === "android") {
+            // Android emulator can reach host machine via 10.0.2.2.
+            url = url.replace(/localhost|127\.0\.0\.1/g, "10.0.2.2");
         }
     }
 
+    url = url.replace(/\/+$/, "");
     console.log("Resolved API URL:", url);
     return url;
 };
@@ -171,6 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         role: "attendee" | "organizer"
     ) => {
         try {
+            console.log("Registering to:", `${API_URL}/auth/register`);
             const response = await axios.post(`${API_URL}/auth/register`, {
                 full_name,
                 email,

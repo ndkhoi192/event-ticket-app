@@ -2,7 +2,7 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Edit2, Plus, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { API_URL, useAuth } from "../../context/AuthContext";
 
 interface Voucher {
@@ -87,7 +87,6 @@ export default function ManageVouchersScreen() {
                 discount_value: Number(formData.discount_value),
                 min_order_value: Number(formData.min_order_value || 0),
                 expiry_date: new Date(formData.expiry_date).toISOString(),
-                event_id: null // Global voucher for this organizer's events
             };
 
             const headers = { Authorization: `Bearer ${token}` };
@@ -219,75 +218,83 @@ export default function ManageVouchersScreen() {
 
             {/* Modal */}
             <Modal animationType="slide" transparent={true} visible={modalVisible}>
-                <View className="flex-1 justify-end bg-black/50">
-                    <View className="bg-white px-6 pt-6 pb-12 rounded-t-3xl shadow-xl">
-                        <Text className="text-xl font-bold text-gray-800 mb-4">
-                            {formData._id ? "Edit voucher" : "Add voucher"}
-                        </Text>
-                        
-                        <TextInput
-                            className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 mb-4 text-base focus:border-pastel-blue focus:bg-white uppercase"
-                            placeholder="Code (e.g. SUMMER24)"
-                            value={formData.code}
-                            onChangeText={(t) => setFormData({ ...formData, code: t })}
-                            autoCapitalize="characters"
-                        />
+                <KeyboardAvoidingView
+                    className="flex-1 justify-end bg-black/50"
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                >
+                    <View className="bg-white rounded-t-3xl shadow-xl max-h-[90%]">
+                        <ScrollView
+                            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 36 }}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            <Text className="text-xl font-bold text-gray-800 mb-4">
+                                {formData._id ? "Edit voucher" : "Add voucher"}
+                            </Text>
 
-                        <View className="flex-row mb-4">
-                            <TouchableOpacity
-                                className={`flex-1 py-3 rounded-xl mr-2 border ${formData.discount_type === "fixed" ? "bg-pink-50 border-pink-300" : "bg-gray-50 border-gray-200"}`}
-                                onPress={() => setFormData({ ...formData, discount_type: "fixed" })}
-                            >
-                                <Text className="text-center font-semibold text-gray-700">Fixed amount</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                className={`flex-1 py-3 rounded-xl ml-2 border ${formData.discount_type === "percentage" ? "bg-pink-50 border-pink-300" : "bg-gray-50 border-gray-200"}`}
-                                onPress={() => setFormData({ ...formData, discount_type: "percentage" })}
-                            >
-                                <Text className="text-center font-semibold text-gray-700">Percentage</Text>
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <View className="flex-row mb-4 space-x-4">
                             <TextInput
-                                className="flex-1 border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-base focus:border-pastel-blue"
-                                placeholder={formData.discount_type === "percentage" ? "Discount (%)" : "Discount (VND)"}
-                                value={formData.discount_value}
-                                onChangeText={(t) => setFormData({ ...formData, discount_value: t })}
-                                keyboardType="numeric"
+                                className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 mb-4 text-base focus:border-pastel-blue focus:bg-white uppercase"
+                                placeholder="Code (e.g. SUMMER24)"
+                                value={formData.code}
+                                onChangeText={(t) => setFormData({ ...formData, code: t })}
+                                autoCapitalize="characters"
                             />
-                            <TextInput
-                                className="flex-1 border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-base focus:border-pastel-blue"
-                                placeholder="Minimum order (VND)"
-                                value={formData.min_order_value}
-                                onChangeText={(t) => setFormData({ ...formData, min_order_value: t })}
-                                keyboardType="numeric"
-                            />
-                        </View>
 
-                        <TextInput
-                            className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 mb-4 text-base focus:border-pastel-blue"
-                            placeholder="Expiry date (YYYY-MM-DD)"
-                            value={formData.expiry_date}
-                            onChangeText={(t) => setFormData({ ...formData, expiry_date: t })}
-                        />
-                        
-                        <View className="flex-row space-x-4 mt-2">
-                            <TouchableOpacity 
-                                className="flex-1 items-center justify-center bg-gray-100 py-4 rounded-xl mr-2"
-                                onPress={() => setModalVisible(false)}
-                            >
-                                <Text className="text-gray-600 font-bold text-base">Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                className="flex-1 items-center justify-center bg-pastel-blue py-4 rounded-xl ml-2"
-                                onPress={handleSave}
-                            >
-                                <Text className="text-white font-bold text-base">Save</Text>
-                            </TouchableOpacity>
-                        </View>
+                            <View className="flex-row mb-4">
+                                <TouchableOpacity
+                                    className={`flex-1 py-3 rounded-xl mr-2 border ${formData.discount_type === "fixed" ? "bg-pink-50 border-pink-300" : "bg-gray-50 border-gray-200"}`}
+                                    onPress={() => setFormData({ ...formData, discount_type: "fixed" })}
+                                >
+                                    <Text className="text-center font-semibold text-gray-700">Fixed amount</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className={`flex-1 py-3 rounded-xl ml-2 border ${formData.discount_type === "percentage" ? "bg-pink-50 border-pink-300" : "bg-gray-50 border-gray-200"}`}
+                                    onPress={() => setFormData({ ...formData, discount_type: "percentage" })}
+                                >
+                                    <Text className="text-center font-semibold text-gray-700">Percentage</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View className="flex-row mb-4 space-x-4">
+                                <TextInput
+                                    className="flex-1 border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-base focus:border-pastel-blue"
+                                    placeholder={formData.discount_type === "percentage" ? "Discount (%)" : "Discount (VND)"}
+                                    value={formData.discount_value}
+                                    onChangeText={(t) => setFormData({ ...formData, discount_value: t })}
+                                    keyboardType="numeric"
+                                />
+                                <TextInput
+                                    className="flex-1 border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-base focus:border-pastel-blue"
+                                    placeholder="Minimum order (VND)"
+                                    value={formData.min_order_value}
+                                    onChangeText={(t) => setFormData({ ...formData, min_order_value: t })}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+
+                            <TextInput
+                                className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 mb-4 text-base focus:border-pastel-blue"
+                                placeholder="Expiry date (YYYY-MM-DD)"
+                                value={formData.expiry_date}
+                                onChangeText={(t) => setFormData({ ...formData, expiry_date: t })}
+                            />
+
+                            <View className="flex-row space-x-4 mt-2">
+                                <TouchableOpacity
+                                    className="flex-1 items-center justify-center bg-gray-100 py-4 rounded-xl mr-2"
+                                    onPress={() => setModalVisible(false)}
+                                >
+                                    <Text className="text-gray-600 font-bold text-base">Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="flex-1 items-center justify-center bg-pastel-blue py-4 rounded-xl ml-2"
+                                    onPress={handleSave}
+                                >
+                                    <Text className="text-white font-bold text-base">Save</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

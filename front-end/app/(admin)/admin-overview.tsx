@@ -1,5 +1,5 @@
 import { Link } from "expo-router";
-import { Folder, User, Users } from "lucide-react-native";
+import { CalendarRange, Folder, User, Users } from "lucide-react-native";
 import { Text, TouchableOpacity, View } from "react-native";
 
 export default function AdminScreen() {
@@ -11,6 +11,22 @@ export default function AdminScreen() {
             </View>
 
             <View className="space-y-4">
+                {/* Manage Events */}
+                <Link href="/(admin)/events" asChild>
+                    <TouchableOpacity className="flex-row items-center justify-between bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4">
+                        <View className="flex-row items-center">
+                            <View className="w-12 h-12 bg-pink-50 rounded-full items-center justify-center mr-4">
+                                <CalendarRange size={24} color="#FB96BB" />
+                            </View>
+                            <View>
+                                <Text className="text-lg font-bold text-gray-800">Manage Events</Text>
+                                <Text className="text-gray-400 text-sm mt-1">View all events by status</Text>
+                            </View>
+                        </View>
+                        <Text className="text-gray-300 font-bold text-xl">→</Text>
+                    </TouchableOpacity>
+                </Link>
+
                 {/* Manage Users */}
                 <Link href="/(admin)/users" asChild>
                     <TouchableOpacity className="flex-row items-center justify-between bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4">

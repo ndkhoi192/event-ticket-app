@@ -2,7 +2,7 @@ import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, CreditCard, Minus, Plus, Ticket } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { io } from "socket.io-client";
 import { API_URL, useAuth } from "../../../context/AuthContext";
 import { Event, TicketType, VoucherValidationResult } from "../../../types";
@@ -23,16 +23,25 @@ export default function BookingScreen() {
   const [voucherCode, setVoucherCode] = useState("");
   const [applyingVoucher, setApplyingVoucher] = useState(false);
   const [appliedVoucher, setAppliedVoucher] = useState<VoucherValidationResult | null>(null);
+  const isFetchingEventRef = React.useRef(false);
+
+  const showPaymentSuccessAndGoTickets = React.useCallback(() => {
+    Alert.alert("Success", "Payment confirmed. Your tickets are ready.", [
+      { text: "View tickets", onPress: () => router.replace("/(attendee)/tickets") },
+    ]);
+  }, [router]);
 
   const fetchEvent = React.useCallback(async () => {
     if (!eventId) return;
+    if (isFetchingEventRef.current) return;
+
+    isFetchingEventRef.current = true;
 
     try {
       const response = await axios.get(`${API_URL}/events/${eventId}`);
       if (response.data?.status !== "published") {
-        Alert.alert("Unavailable", "This event is no longer available for booking.", [
-          { text: "OK", onPress: () => router.replace("/(attendee)/discover") },
-        ]);
+        setEvent(null);
+        Alert.alert("Unavailable", "This event is no longer available for booking.");
         return;
       }
 
@@ -46,8 +55,10 @@ export default function BookingScreen() {
     } catch (error) {
       console.error("Failed to fetch event", error);
       Alert.alert("Error", "Could not load event details.");
+    } finally {
+      isFetchingEventRef.current = false;
     }
-  }, [eventId, router]);
+  }, [eventId]);
 
   useEffect(() => {
     if (!eventId) {
@@ -100,16 +111,14 @@ export default function BookingScreen() {
 
       if (payload?.paymentStatus === "paid") {
         setQrModalVisible(false);
-        Alert.alert("Success", "Payment confirmed. Your tickets are ready.", [
-          { text: "View tickets", onPress: () => router.replace("/(attendee)/tickets") },
-        ]);
+        showPaymentSuccessAndGoTickets();
       }
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [eventId, token, pendingBookingId, router]);
+  }, [eventId, token, pendingBookingId, showPaymentSuccessAndGoTickets]);
 
   const updateQuantity = (typeName: string, delta: number) => {
     setQuantities((prev) => {
@@ -164,6 +173,7 @@ export default function BookingScreen() {
     try {
       const response = await axios.post(`${API_URL}/vouchers/validate`, {
         code,
+        event_id: event._id,
       });
 
       const result = response.data as VoucherValidationResult;
@@ -186,17 +196,20 @@ export default function BookingScreen() {
   const confirmPayment = async (bookingId: string) => {
     setProcessing(true);
     try {
-      const response = await axios.post(`${API_URL}/bookings/${bookingId}/confirm-payment`);
-      if (response.data.booking.payment_status === "paid") {
-        Alert.alert("Success", "Payment confirmed. Your tickets are ready.", [
-          { text: "View tickets", onPress: () => router.replace("/(attendee)/tickets") },
-        ]);
-      } else {
-        Alert.alert("Not confirmed yet", "Payment has not been confirmed. Please try again.", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Retry", onPress: () => confirmPayment(bookingId) },
-        ]);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.post(`${API_URL}/bookings/${bookingId}/confirm-payment`, {}, { headers });
+      const bookingStatus = response?.data?.booking?.payment_status;
+
+      if (bookingStatus === "paid" || response?.data?.message === "Already paid") {
+        setQrModalVisible(false);
+        showPaymentSuccessAndGoTickets();
+        return;
       }
+
+      Alert.alert("Not confirmed yet", "Payment has not been confirmed. Please try again.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Retry", onPress: () => confirmPayment(bookingId) },
+      ]);
     } catch (error: any) {
       console.error("Confirmation failed", error);
       Alert.alert("Error", error.response?.data?.message || "Could not confirm payment.");
@@ -206,9 +219,6 @@ export default function BookingScreen() {
   };
 
   const handleCheckout = async () => {
-    const subtotal = calculateTotal();
-    const discountAmount = calculateDiscountAmount(subtotal);
-    const total = Math.max(0, subtotal - discountAmount);
     const hasSelected = Object.values(quantities).some((q) => q > 0);
 
     if (!hasSelected) {
@@ -287,7 +297,10 @@ export default function BookingScreen() {
   const isSoldOut = totalRemaining <= 0;
 
   return (
-    <View className="flex-1 bg-white">
+    <KeyboardAvoidingView
+      className="flex-1 bg-white"
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <View className="pt-12 pb-4 px-6 flex-row items-center border-b border-gray-100 bg-white z-10">
         <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
           <ArrowLeft color="#FB96BB" size={24} />
@@ -297,7 +310,7 @@ export default function BookingScreen() {
         </Text>
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-6">
+      <ScrollView className="flex-1 px-6 pt-6" keyboardShouldPersistTaps="handled">
         <Text className="text-lg font-bold text-gray-800 mb-4">Choose ticket types</Text>
 
         {isSoldOut && (
@@ -435,7 +448,6 @@ export default function BookingScreen() {
               className="bg-pink-500 py-4 rounded-xl"
               onPress={async () => {
                 const bookingId = pendingBookingId;
-                setQrModalVisible(false);
                 if (bookingId) {
                   await confirmPayment(bookingId);
                 }
@@ -451,6 +463,6 @@ export default function BookingScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

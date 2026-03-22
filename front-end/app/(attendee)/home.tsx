@@ -20,6 +20,8 @@ export default function AttendeeHomeScreen() {
     const [searchKeyword, setSearchKeyword] = useState("");
     const [activeSlide, setActiveSlide] = useState(0);
     const featuredListRef = useRef<FlatList<Event>>(null);
+    const isFetchingRef = useRef(false);
+    const lastFetchAtRef = useRef(0);
 
     const handleHeaderSearch = () => {
         const keyword = searchKeyword.trim();
@@ -30,7 +32,12 @@ export default function AttendeeHomeScreen() {
         setShowSearchInput(false);
     };
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (force = false) => {
+        const now = Date.now();
+        if (isFetchingRef.current) return;
+        if (!force && now - lastFetchAtRef.current < 1200) return;
+
+        isFetchingRef.current = true;
         try {
             const [latestRes, hotRes] = await Promise.all([
                 axios.get(`${API_URL}/events/latest?n=5`),
@@ -41,12 +48,14 @@ export default function AttendeeHomeScreen() {
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
+            lastFetchAtRef.current = Date.now();
+            isFetchingRef.current = false;
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchData();
+        fetchData(true);
     }, [fetchData]);
 
     useEffect(() => {
@@ -56,7 +65,7 @@ export default function AttendeeHomeScreen() {
         const socket = io(socketBaseUrl, { auth: { token } });
 
         socket.on("events:public-updated", () => {
-            fetchData();
+            fetchData(false);
         });
 
         return () => {

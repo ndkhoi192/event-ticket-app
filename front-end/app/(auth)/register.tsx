@@ -78,7 +78,7 @@ export default function RegisterScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
+                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue mb-3">
                         <User color="#FB96BB" size={20} />
                         <TextInput
                             className="flex-1 ml-3 text-gray-700"
@@ -89,7 +89,7 @@ export default function RegisterScreen() {
                         />
                     </View>
 
-                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue">
+                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-blue mb-3">
                         <Mail color="#FB96BB" size={20} />
                         <TextInput
                             className="flex-1 ml-3 text-gray-700"
@@ -102,7 +102,7 @@ export default function RegisterScreen() {
                         />
                     </View>
 
-                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-pink">
+                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-pink mb-3">
                         <Lock color="#FB96BB" size={20} />
                         <TextInput
                             className="flex-1 ml-3 text-gray-700"

@@ -77,7 +77,7 @@ export default function LoginScreen() {
                 </View>
 
                 <View className="space-y-4">
-                    <View className="flex-row items-center border border-pastel-blue rounded-full px-4 py-3 bg-pink-50">
+                    <View className="flex-row items-center border border-pastel-blue rounded-full px-4 py-3 bg-pink-50 mb-3">
                         <Mail color="#FB96BB" size={20} />
                         <TextInput
                             className="flex-1 ml-3 text-gray-700"

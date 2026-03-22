@@ -2,7 +2,7 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Edit2, Plus, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { API_URL, useAuth } from "../../context/AuthContext";
 import { Category } from "../../types";
 
@@ -154,36 +154,44 @@ export default function ManageCategoriesScreen() {
                 visible={modalVisible}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View className="flex-1 justify-end bg-black/50">
-                    <View className="bg-white px-6 pt-6 pb-12 rounded-t-3xl shadow-xl">
-                        <Text className="text-xl font-bold text-gray-800 mb-4">
-                            {currentCat._id ? "Edit category" : "Add category"}
-                        </Text>
-                        
-                        <TextInput
-                            className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-4 mb-6 text-base focus:border-pastel-pink focus:bg-white"
-                            placeholder="Category name..."
-                            value={currentCat.name}
-                            onChangeText={(text) => setCurrentCat({ ...currentCat, name: text })}
-                            autoFocus
-                        />
-                        
-                        <View className="flex-row space-x-4">
-                            <TouchableOpacity 
-                                className="flex-1 items-center justify-center bg-gray-100 py-4 rounded-xl mr-2"
-                                onPress={() => setModalVisible(false)}
-                            >
-                                <Text className="text-gray-600 font-bold text-base">Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                className="flex-1 items-center justify-center bg-pastel-pink py-4 rounded-xl ml-2"
-                                onPress={handleSave}
-                            >
-                                <Text className="text-white font-bold text-base">Save</Text>
-                            </TouchableOpacity>
-                        </View>
+                <KeyboardAvoidingView
+                    className="flex-1 justify-end bg-black/50"
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                >
+                    <View className="bg-white rounded-t-3xl shadow-xl max-h-[85%]">
+                        <ScrollView
+                            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 36 }}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            <Text className="text-xl font-bold text-gray-800 mb-4">
+                                {currentCat._id ? "Edit category" : "Add category"}
+                            </Text>
+
+                            <TextInput
+                                className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-4 mb-6 text-base focus:border-pastel-pink focus:bg-white"
+                                placeholder="Category name..."
+                                value={currentCat.name}
+                                onChangeText={(text) => setCurrentCat({ ...currentCat, name: text })}
+                                autoFocus
+                            />
+
+                            <View className="flex-row space-x-4">
+                                <TouchableOpacity
+                                    className="flex-1 items-center justify-center bg-gray-100 py-4 rounded-xl mr-2"
+                                    onPress={() => setModalVisible(false)}
+                                >
+                                    <Text className="text-gray-600 font-bold text-base">Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="flex-1 items-center justify-center bg-pastel-pink py-4 rounded-xl ml-2"
+                                    onPress={handleSave}
+                                >
+                                    <Text className="text-white font-bold text-base">Save</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

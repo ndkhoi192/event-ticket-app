@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const voucherSchema = new mongoose.Schema({
-    event_id: {
+    organizer_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Event',
+        ref: 'User',
         default: null
     },
     code: {

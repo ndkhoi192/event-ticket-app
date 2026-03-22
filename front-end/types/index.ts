@@ -84,7 +84,7 @@ export interface VoucherValidationResult {
     discount_type: 'percentage' | 'fixed';
     discount_value: number;
     min_order_value: number;
-    event_id?: string | null;
+    organizer_id?: string | null;
 }
 
 export interface TicketItem {

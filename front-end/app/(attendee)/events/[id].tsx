@@ -1,8 +1,8 @@
 import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Clock, Heart, MapPin, Share2, Ticket } from "lucide-react-native";
+import { ArrowLeft, Clock, Heart, MapPin, Ticket } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { io } from "socket.io-client";
 import { API_URL, useAuth } from "../../../context/AuthContext";
 import { Event, TicketType } from "../../../types";
@@ -264,8 +264,11 @@ export default function EventDetailsScreen() {
     };
 
     return (
-        <View className="flex-1 bg-white">
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView
+            className="flex-1 bg-white"
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 {/* Header Image */}
                 <View className="relative">
                     <Image
@@ -293,12 +296,12 @@ export default function EventDetailsScreen() {
                                     size={24}
                                 />
                             </TouchableOpacity>
-                            <TouchableOpacity
+                            {/* <TouchableOpacity
                                 className="bg-white/80 p-2 rounded-full backdrop-blur-md shadow-sm"
                                 onPress={() => Alert.alert("Share", "Sharing not implemented yet!")}
                             >
                                 <Share2 color="#FB96BB" size={24} />
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
                         </View>
                     </View>
                 </View>
@@ -441,6 +444,6 @@ export default function EventDetailsScreen() {
                 </TouchableOpacity>
             </View>
 
-        </View>
+        </KeyboardAvoidingView>
     );
 }

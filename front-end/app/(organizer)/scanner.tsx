@@ -3,7 +3,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { ArrowLeft, CheckCircle, QrCode } from "lucide-react-native";
 import React, { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { io } from "socket.io-client";
 import { API_URL, useAuth } from "../../context/AuthContext";
 
@@ -185,7 +185,10 @@ export default function TicketScannerScreen() {
     };
 
     return (
-        <View className="flex-1 bg-white">
+        <KeyboardAvoidingView
+            className="flex-1 bg-white"
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
             <View className="pt-12 pb-4 px-6 flex-row items-center border-b border-gray-100 mb-10">
                 <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
                     <ArrowLeft color="#FB96BB" size={24} />
@@ -193,7 +196,8 @@ export default function TicketScannerScreen() {
                 <Text className="text-xl font-bold text-gray-900">Ticket Verification</Text>
             </View>
 
-            <View className="px-6 items-center">
+            <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 36 }}>
+            <View className="items-center">
                 {fraudBanner && (
                     <Animated.View className="w-full bg-red-100 border border-red-300 rounded-xl p-3 mb-4" style={{ opacity: fraudBlinkOpacity }}>
                         <Text className="text-red-700 font-bold text-center">{fraudBanner}</Text>
@@ -304,7 +308,8 @@ export default function TicketScannerScreen() {
                     </View>
                 )}
             </View>
-        </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 

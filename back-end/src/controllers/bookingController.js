@@ -293,6 +293,12 @@ exports.createBooking = async (req, res) => {
                 return res.status(400).json({ message: 'Voucher expired' });
             }
 
+            const voucherOwnerId = voucher.organizer_id || null;
+
+            if (!voucherOwnerId || String(voucherOwnerId) !== String(event.organizer_id)) {
+                return res.status(400).json({ message: 'Voucher is not available for this event' });
+            }
+
             if (voucher.discount_type === 'percentage') {
                 discountAmount = (calculatedTotal * Number(voucher.discount_value || 0)) / 100;
             } else {

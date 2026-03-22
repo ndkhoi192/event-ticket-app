@@ -2,7 +2,7 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Save } from "lucide-react-native";
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { API_URL, useAuth } from "../../context/AuthContext";
 
 export default function EditProfileScreen() {
@@ -39,7 +39,10 @@ export default function EditProfileScreen() {
     };
 
     return (
-        <View className="flex-1 bg-white">
+        <KeyboardAvoidingView
+            className="flex-1 bg-white"
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
             <View className="pt-12 pb-4 px-6 flex-row items-center border-b border-gray-100 mb-6">
                 <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-gray-50 rounded-full">
                     <ArrowLeft color="#FB96BB" size={24} />
@@ -47,7 +50,7 @@ export default function EditProfileScreen() {
                 <Text className="text-xl font-bold text-gray-900">Edit Profile</Text>
             </View>
 
-            <View className="px-6">
+            <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
                 <Text className="text-gray-700 font-bold mb-2">Full name</Text>
                 <TextInput
                     className="border border-gray-200 rounded-xl px-4 py-4 bg-gray-50 text-gray-800 text-base mb-4 focus:border-pastel-pink"
@@ -63,7 +66,7 @@ export default function EditProfileScreen() {
                     editable={false}
                 />
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     className="bg-pastel-pink py-4 rounded-xl flex-row justify-center items-center shadow-sm"
                     onPress={handleSave}
                     disabled={loading}
@@ -77,8 +80,8 @@ export default function EditProfileScreen() {
                         </>
                     )}
                 </TouchableOpacity>
-            </View>
-        </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
