@@ -169,6 +169,40 @@ const emitBookingStatusUpdate = async (booking) => {
     }
 };
 
+const applyTicketQuantities = async (eventId, items) => {
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return { ok: false, message: 'Event not found' };
+        }
+
+        for (const item of items) {
+            const ticketType = event.ticket_types.find((t) => t.type_name === item.type_name);
+            if (!ticketType) {
+                return { ok: false, message: `Ticket type "${item.type_name}" not found in event` };
+            }
+
+            if (ticketType.remaining_quantity < item.quantity) {
+                return {
+                    ok: false,
+                    message: `Not enough tickets for "${item.type_name}". Only ${ticketType.remaining_quantity} left.`,
+                };
+            }
+        }
+
+        for (const item of items) {
+            const ticketType = event.ticket_types.find((t) => t.type_name === item.type_name);
+            ticketType.remaining_quantity -= item.quantity;
+        }
+
+        await event.save();
+        await emitEventInventory(event._id.toString());
+        return { ok: true };
+    } catch (err) {
+        return { ok: false, message: 'Could not reserve tickets at this time' };
+    }
+};
+
 // Helper: Rollback ticket quantities on failure
 const rollbackTicketQuantities = async (eventId, items) => {
     try {
@@ -219,7 +253,7 @@ exports.createBooking = async (req, res) => {
             return res.status(400).json({ message: 'Event is not available for booking' });
         }
 
-        // Check items availability and reduce quantities
+        // Check items availability snapshot and calculate totals.
         let totalTickets = 0;
         let calculatedTotal = 0;
         for (const item of items) {
@@ -234,7 +268,6 @@ exports.createBooking = async (req, res) => {
             if (ticketType.remaining_quantity < item.quantity) {
                 return res.status(400).json({ message: `Not enough tickets for "${item.type_name}". Only ${ticketType.remaining_quantity} left.` });
             }
-            ticketType.remaining_quantity -= item.quantity;
             totalTickets += item.quantity;
             calculatedTotal += Number(item.unit_price || 0) * item.quantity;
         }
@@ -260,14 +293,6 @@ exports.createBooking = async (req, res) => {
                 return res.status(400).json({ message: 'Voucher expired' });
             }
 
-            if (voucher.event_id && voucher.event_id.toString() !== event_id.toString()) {
-                return res.status(400).json({ message: 'Voucher not applicable for this event' });
-            }
-
-            if (calculatedTotal < voucher.min_order_value) {
-                return res.status(400).json({ message: `Minimum order value for this voucher is ${voucher.min_order_value}` });
-            }
-
             if (voucher.discount_type === 'percentage') {
                 discountAmount = (calculatedTotal * Number(voucher.discount_value || 0)) / 100;
             } else {
@@ -279,10 +304,6 @@ exports.createBooking = async (req, res) => {
             appliedDiscountType = voucher.discount_type;
             appliedDiscountValue = Number(voucher.discount_value || 0);
         }
-
-        // Save updated event quantities
-        await event.save();
-        await emitEventInventory(event._id.toString());
 
         const totalAmount = Math.max(0, calculatedTotal - discountAmount);
         const isZeroAmount = totalAmount === 0 || calculatedTotal === 0;
@@ -304,6 +325,11 @@ exports.createBooking = async (req, res) => {
 
         // ============ CASE 1: ZERO-AMOUNT BOOKING ============
         if (isZeroAmount) {
+            const reserveResult = await applyTicketQuantities(event_id, items);
+            if (!reserveResult.ok) {
+                return res.status(400).json({ message: reserveResult.message });
+            }
+
             const newBooking = new Booking(bookingData);
             const savedBooking = await newBooking.save();
 
@@ -410,6 +436,12 @@ exports.confirmPayment = async (req, res) => {
             if (!isOwner && !isAdmin) {
                 return res.status(403).json({ message: 'Not authorized to confirm this payment' });
             }
+
+            const reserveResult = await applyTicketQuantities(booking.event_id, booking.items);
+            if (!reserveResult.ok) {
+                return res.status(400).json({ message: reserveResult.message });
+            }
+
             booking.payment_status = 'paid';
             booking.transaction_id = booking.transaction_id || `FAKE-${Date.now()}`;
             await booking.save();
@@ -420,6 +452,12 @@ exports.confirmPayment = async (req, res) => {
             if (!isOrganizer && !isAdmin) {
                 return res.status(403).json({ message: 'Only organizer or admin can confirm cash payment' });
             }
+
+            const reserveResult = await applyTicketQuantities(booking.event_id, booking.items);
+            if (!reserveResult.ok) {
+                return res.status(400).json({ message: reserveResult.message });
+            }
+
             booking.payment_status = 'paid';
             booking.confirmed_by = req.user._id;
             booking.confirmed_at = new Date();
@@ -476,6 +514,11 @@ exports.payosWebhook = async (req, res) => {
 
         // Keep this endpoint for backward compatibility; in fake flow we trust success callbacks.
         if (code === '00' || desc === 'success') {
+            const reserveResult = await applyTicketQuantities(booking.event_id, booking.items);
+            if (!reserveResult.ok) {
+                return res.status(200).json({ message: reserveResult.message });
+            }
+
             booking.payment_status = 'paid';
             booking.transaction_id = req.body.data?.transactionId || '';
             await booking.save();
@@ -634,10 +677,11 @@ exports.cancelBooking = async (req, res) => {
             return res.status(400).json({ message: 'Booking already cancelled/refunded' });
         }
 
-        // Restore event quantities
-        await rollbackTicketQuantities(booking.event_id, booking.items);
-
-        await emitEventInventory(booking.event_id.toString());
+        const shouldRestoreInventory = booking.payment_status === 'paid';
+        if (shouldRestoreInventory) {
+            await rollbackTicketQuantities(booking.event_id, booking.items);
+            await emitEventInventory(booking.event_id.toString());
+        }
 
         // Update booking status
         if (booking.payment_status === 'paid') {

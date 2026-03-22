@@ -46,7 +46,6 @@ export default function BookingScreen() {
     } catch (error) {
       console.error("Failed to fetch event", error);
       Alert.alert("Error", "Could not load event details.");
-      router.back();
     }
   }, [eventId, router]);
 
@@ -107,23 +106,10 @@ export default function BookingScreen() {
       }
     });
 
-    socket.on("event:details-updated", (payload: { eventId?: string; status?: string }) => {
-      if (payload?.eventId !== eventId) return;
-
-      if (payload?.status && payload.status !== "published") {
-        Alert.alert("Unavailable", "This event is no longer available for booking.", [
-          { text: "OK", onPress: () => router.replace("/(attendee)/discover") },
-        ]);
-        return;
-      }
-
-      fetchEvent();
-    });
-
     return () => {
       socket.disconnect();
     };
-  }, [eventId, token, pendingBookingId, router, fetchEvent]);
+  }, [eventId, token, pendingBookingId, router]);
 
   const updateQuantity = (typeName: string, delta: number) => {
     setQuantities((prev) => {
@@ -152,7 +138,6 @@ export default function BookingScreen() {
 
   const calculateDiscountAmount = (subtotal: number) => {
     if (!appliedVoucher || subtotal <= 0) return 0;
-    if (subtotal < (appliedVoucher.min_order_value || 0)) return 0;
 
     if (appliedVoucher.discount_type === "percentage") {
       return Math.min(subtotal, Math.round((subtotal * Number(appliedVoucher.discount_value || 0)) / 100));
@@ -179,8 +164,6 @@ export default function BookingScreen() {
     try {
       const response = await axios.post(`${API_URL}/vouchers/validate`, {
         code,
-        event_id: event._id,
-        order_value: subtotal,
       });
 
       const result = response.data as VoucherValidationResult;

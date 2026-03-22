@@ -64,8 +64,9 @@ exports.deleteVoucher = async (req, res) => {
 // @access  Public
 exports.validateVoucher = async (req, res) => {
     try {
-        const { code, event_id, order_value } = req.body;
-        const voucher = await Voucher.findOne({ code });
+        const { code } = req.body;
+        const normalizedCode = String(code || '').trim().toUpperCase();
+        const voucher = await Voucher.findOne({ code: normalizedCode });
 
         if (!voucher) {
             return res.status(404).json({ message: 'Invalid voucher code' });
@@ -76,22 +77,12 @@ exports.validateVoucher = async (req, res) => {
             return res.status(400).json({ message: 'Voucher expired' });
         }
 
-        // Check event applicability (if not global)
-        if (voucher.event_id && voucher.event_id.toString() !== event_id) {
-            return res.status(400).json({ message: 'Voucher not applicable for this event' });
-        }
-
-        // Check min order value
-        if (order_value < voucher.min_order_value) {
-            return res.status(400).json({ message: `Minimum order value for this voucher is ${voucher.min_order_value}` });
-        }
-
         res.json({
             valid: true,
             code: voucher.code,
             discount_type: voucher.discount_type,
             discount_value: voucher.discount_value,
-            min_order_value: voucher.min_order_value,
+            min_order_value: voucher.min_order_value || 0,
             event_id: voucher.event_id || null,
         });
 
