@@ -1,7 +1,8 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Edit2, Plus, Trash2 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { API_URL, useAuth } from "../../context/AuthContext";
 
@@ -23,6 +24,7 @@ export default function ManageVouchersScreen() {
 
     // Modal state
     const [modalVisible, setModalVisible] = useState(false);
+    const [showExpiryPicker, setShowExpiryPicker] = useState(false);
     const [formData, setFormData] = useState<{
         _id?: string;
         code: string;
@@ -43,7 +45,7 @@ export default function ManageVouchersScreen() {
         return Number.isFinite(n) ? n : fallback;
     };
 
-    const fetchVouchers = async () => {
+    const fetchVouchers = useCallback(async () => {
         try {
             const response = await axios.get(`${API_URL}/vouchers`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -63,11 +65,11 @@ export default function ManageVouchersScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         fetchVouchers();
-    }, []);
+    }, [fetchVouchers]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -121,7 +123,7 @@ export default function ManageVouchersScreen() {
                             });
                             Alert.alert("Success", "Voucher deleted.");
                             fetchVouchers();
-                        } catch (error) {
+                        } catch {
                             Alert.alert("Error", "Could not delete voucher.");
                         }
                     }
@@ -158,6 +160,7 @@ export default function ManageVouchersScreen() {
                             min_order_value: "0",
                             expiry_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
                         });
+                        setShowExpiryPicker(false);
                         setModalVisible(true);
                     }}
                 >
@@ -200,6 +203,7 @@ export default function ManageVouchersScreen() {
                                         min_order_value: toSafeNumber(item.min_order_value).toString(),
                                         expiry_date: new Date(item.expiry_date).toISOString().slice(0, 10)
                                     });
+                                    setShowExpiryPicker(false);
                                     setModalVisible(true);
                                 }}
                             >
@@ -271,12 +275,38 @@ export default function ManageVouchersScreen() {
                                 />
                             </View>
 
-                            <TextInput
-                                className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 mb-4 text-base focus:border-pastel-blue"
-                                placeholder="Expiry date (YYYY-MM-DD)"
-                                value={formData.expiry_date}
-                                onChangeText={(t) => setFormData({ ...formData, expiry_date: t })}
-                            />
+                            <View className="mb-4">
+                                <Text className="text-xs text-gray-500 mb-1">Expiry date</Text>
+                                <TouchableOpacity
+                                    className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3"
+                                    onPress={() => setShowExpiryPicker(true)}
+                                >
+                                    <Text className="text-base text-gray-800">{formData.expiry_date}</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {showExpiryPicker && (
+                                <DateTimePicker
+                                    value={new Date(formData.expiry_date)}
+                                    mode="date"
+                                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                                    textColor={Platform.OS === "ios" ? "#111827" : undefined}
+                                    themeVariant={Platform.OS === "ios" ? "light" : undefined}
+                                    accentColor={Platform.OS === "ios" ? "#FB96BB" : undefined}
+                                    minimumDate={new Date()}
+                                    onChange={(_, selectedDate) => {
+                                        if (Platform.OS === "android") {
+                                            setShowExpiryPicker(false);
+                                        }
+                                        if (selectedDate) {
+                                            setFormData({
+                                                ...formData,
+                                                expiry_date: selectedDate.toISOString().slice(0, 10),
+                                            });
+                                        }
+                                    }}
+                                />
+                            )}
 
                             <View className="flex-row space-x-4 mt-2">
                                 <TouchableOpacity

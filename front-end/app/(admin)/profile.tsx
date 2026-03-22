@@ -1,16 +1,17 @@
 import { useRouter } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
+import { ArrowLeft, ChevronRight } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
 import {
-    Alert,
     Animated,
     Easing,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
 const COLORS = {
@@ -63,6 +64,7 @@ function ScalePressable({
 export default function ProfileScreen() {
     const { user, logout } = useAuth();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     const headerAnim = useRef(new Animated.Value(0)).current;
     const settingsAnim = useRef(new Animated.Value(0)).current;
@@ -99,10 +101,6 @@ export default function ProfileScreen() {
         ],
     });
 
-    const openPlaceholder = (title: string) => {
-        Alert.alert(title, "This section is coming soon.");
-    };
-
     const onLogout = async () => {
         await logout();
         router.replace("/(auth)/login");
@@ -122,6 +120,16 @@ export default function ProfileScreen() {
 
     return (
         <View style={styles.screen}>
+            <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => router.push("/(admin)/admin-overview")}
+                >
+                    <ArrowLeft size={20} color={COLORS.accent} />
+                    <Text style={styles.backButtonText}>Dashboard</Text>
+                </TouchableOpacity>
+            </View>
+
             <ScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.content}
@@ -129,9 +137,13 @@ export default function ProfileScreen() {
             >
                 <Animated.View style={[styles.profileCard, enterStyle(headerAnim)]}>
                     <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>
-                        {user?.full_name?.charAt(0).toUpperCase() || "A"}
-                    </Text>
+                        {user?.avatar_url ? (
+                            <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+                        ) : (
+                            <Text style={styles.avatarText}>
+                                {user?.full_name?.charAt(0).toUpperCase() || "A"}
+                            </Text>
+                        )}
                     </View>
                     <View style={styles.profileInfo}>
                         <Text style={styles.profileName} numberOfLines={1}>
@@ -147,8 +159,8 @@ export default function ProfileScreen() {
                 <Animated.View style={enterStyle(settingsAnim)}>
                     <Text style={styles.sectionTitle}>Settings</Text>
                     <View style={styles.sectionCard}>
-                        {renderMenuItem("Update Profile", () => openPlaceholder("Update Profile"))}
-                        {renderMenuItem("Change Password", () => openPlaceholder("Change Password"))}
+                        {renderMenuItem("Update Profile", () => router.push("/(admin)/edit-profile"))}
+                        {renderMenuItem("Change Password", () => router.push("/(admin)/change-password"))}
                         {renderMenuItem("Admin Dashboard", () => router.push("/(admin)/admin-overview"))}
                         {renderMenuItem("Manage Users", () => router.push("/(admin)/users"))}
                         {renderMenuItem("Manage Categories", () => router.push("/(admin)/categories"), true)}
@@ -158,10 +170,10 @@ export default function ProfileScreen() {
                 <Animated.View style={enterStyle(supportAnim)}>
                     <Text style={styles.sectionTitle}>Support</Text>
                     <View style={styles.sectionCard}>
-                        {renderMenuItem("Help Center", () => router.push({ pathname: "/support/help-center", params: { from: "admin-profile" } }))}
-                        {renderMenuItem("Terms of Service", () => router.push({ pathname: "/support/terms-of-service", params: { from: "admin-profile" } }))}
-                        {renderMenuItem("Privacy Policy", () => router.push({ pathname: "/support/privacy-policy", params: { from: "admin-profile" } }))}
-                        {renderMenuItem("About", () => router.push({ pathname: "/support/about", params: { from: "admin-profile" } }), true)}
+                        {renderMenuItem("Help Center", () => router.push({ pathname: "/support/[slug]", params: { slug: "help-center", from: "admin-profile" } }))}
+                        {renderMenuItem("Terms of Service", () => router.push({ pathname: "/support/[slug]", params: { slug: "terms-of-service", from: "admin-profile" } }))}
+                        {renderMenuItem("Privacy Policy", () => router.push({ pathname: "/support/[slug]", params: { slug: "privacy-policy", from: "admin-profile" } }))}
+                        {renderMenuItem("About", () => router.push({ pathname: "/support/[slug]", params: { slug: "about", from: "admin-profile" } }), true)}
                     </View>
                 </Animated.View>
 
@@ -182,11 +194,32 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.background,
     },
+    topBar: {
+        paddingHorizontal: 16,
+        paddingBottom: 10,
+    },
+    backButton: {
+        alignSelf: "flex-start",
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 999,
+        backgroundColor: COLORS.surface,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    backButtonText: {
+        color: COLORS.textPrimary,
+        fontSize: 14,
+        fontWeight: "600",
+        marginLeft: 6,
+    },
     scroll: {
         flex: 1,
     },
     content: {
-        paddingTop: 16,
+        paddingTop: 8,
         paddingHorizontal: 16,
         paddingBottom: 24,
     },
@@ -213,6 +246,11 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         marginRight: 14,
+        overflow: "hidden",
+    },
+    avatarImage: {
+        width: "100%",
+        height: "100%",
     },
     avatarText: {
         color: "#FFFFFF",

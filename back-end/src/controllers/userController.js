@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 
 // @desc    Get all users (Admin only)
 // @route   GET /api/users
@@ -33,6 +34,13 @@ exports.getUserById = async (req, res) => {
 // @access  Private
 exports.updateUser = async (req, res) => {
     try {
+        const isSelf = String(req.user._id) === String(req.params.id);
+        const isAdmin = req.user.role === 'admin';
+
+        if (!isSelf && !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized to update this user' });
+        }
+
         const user = await User.findById(req.params.id);
 
         if (user) {
@@ -52,7 +60,8 @@ exports.updateUser = async (req, res) => {
                 _id: updatedUser._id,
                 full_name: updatedUser.full_name,
                 email: updatedUser.email,
-                role: updatedUser.role
+                role: updatedUser.role,
+                avatar_url: updatedUser.avatar_url,
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -126,6 +135,41 @@ exports.getSavedEvents = async (req, res) => {
 
         const publishedSavedEvents = (user.saved_events || []).filter((event) => event?.status === 'published');
         res.json(publishedSavedEvents);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Change current user password
+// @route   PUT /api/users/change-password
+// @access  Private
+exports.changePassword = async (req, res) => {
+    try {
+        const { current_password, new_password } = req.body;
+
+        if (!current_password || !new_password) {
+            return res.status(400).json({ message: 'Current password and new password are required' });
+        }
+
+        if (String(new_password).length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters' });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const isMatch = await bcrypt.compare(String(current_password), user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(String(new_password), salt);
+        await user.save();
+
+        res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -36,6 +36,7 @@ interface User {
     full_name: string;
     email: string;
     role: "attendee" | "organizer" | "admin";
+    avatar_url?: string;
     token?: string;
     saved_events?: string[];
 }

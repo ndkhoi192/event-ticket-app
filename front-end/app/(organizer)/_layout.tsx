@@ -46,6 +46,18 @@ export default function OrganizerLayout() {
                 }}
             />
             <Tabs.Screen
+                name="edit-profile"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
+                name="change-password"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
                 name="events/create"
                 options={{
                     href: null,

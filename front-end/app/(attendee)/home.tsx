@@ -100,7 +100,7 @@ export default function AttendeeHomeScreen() {
     return (
         <ScrollView className="flex-1 bg-gray-50" showsVerticalScrollIndicator={false}>
             {/* Header */}
-            <View className="bg-[#fc87b4] pt-14 pb-5 px-6 rounded-b-[10px]">
+            <View className="bg-[#fc87b4] pt-14 pb-5 px-6">
                 <View className="flex-row justify-between items-center">
                     <View className="flex-row items-end">
                         <Text className="text-white text-[24px] leading-[30px] font-extrabold">
