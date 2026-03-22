@@ -20,21 +20,40 @@ export default function EventDetailsScreen() {
   const [loadingBookings, setLoadingBookings] = useState(false);
 
   useEffect(() => {
+    if (!eventId) {
+      setEvent(null);
+      setBookings([]);
+      setShowBookings(false);
+      setLoading(false);
+      return;
+    }
+
+    let isActive = true;
+    setLoading(true);
+    setEvent(null);
+    setBookings([]);
+    setShowBookings(false);
+
     const fetchEventDetails = async () => {
       try {
         const response = await axios.get(`${API_URL}/events/${eventId}`);
+        if (!isActive) return;
         setEvent(response.data);
       } catch (error) {
+        if (!isActive) return;
         console.error("Failed to fetch event details:", error);
         Alert.alert("Error", "Could not load event details.");
       } finally {
+        if (!isActive) return;
         setLoading(false);
       }
     };
 
-    if (eventId) {
-      fetchEventDetails();
-    }
+    fetchEventDetails();
+
+    return () => {
+      isActive = false;
+    };
   }, [eventId]);
 
   const fetchBookings = async () => {

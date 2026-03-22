@@ -1,8 +1,9 @@
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from "react-native";
+import { io } from "socket.io-client";
 import StandardEventCard from "../../components/StandardEventCard";
 import { API_URL, useAuth } from "../../context/AuthContext";
 import { Event } from "../../types";
@@ -14,7 +15,7 @@ export default function SavedEventsScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    const fetchSavedEvents = async () => {
+    const fetchSavedEvents = useCallback(async () => {
         try {
             if (!token) return;
             const response = await axios.get(`${API_URL}/users/me/saved-events`);
@@ -25,11 +26,26 @@ export default function SavedEventsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         fetchSavedEvents();
-    }, []);
+    }, [fetchSavedEvents]);
+
+    useEffect(() => {
+        if (!token) return;
+
+        const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
+        const socket = io(socketBaseUrl, { auth: { token } });
+
+        socket.on("events:public-updated", () => {
+            fetchSavedEvents();
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [token, fetchSavedEvents]);
 
     const onRefresh = () => {
         setRefreshing(true);

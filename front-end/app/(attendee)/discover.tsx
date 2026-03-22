@@ -1,13 +1,15 @@
 import axios from "axios";
 import { useLocalSearchParams } from "expo-router";
 import { Filter, Search } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { io } from "socket.io-client";
 import StandardEventCard from "../../components/StandardEventCard";
-import { API_URL } from "../../context/AuthContext";
+import { API_URL, useAuth } from "../../context/AuthContext";
 import { Category, Event } from "../../types";
 
 export default function DiscoverScreen() {
+    const { token } = useAuth();
     const params = useLocalSearchParams();
     const incomingSearch = typeof params.search === "string" ? params.search : "";
     const incomingCategory = typeof params.category === "string" ? params.category : "All";
@@ -18,7 +20,7 @@ export default function DiscoverScreen() {
     const [selectedCategory, setSelectedCategory] = useState(incomingCategory);
     const [refreshing, setRefreshing] = useState(false);
 
-    const fetchEvents = async () => {
+    const fetchEvents = useCallback(async () => {
         try {
             let url = `${API_URL}/events?status=published`;
             if (searchQuery) url += `&keyword=${searchQuery}`;
@@ -32,7 +34,7 @@ export default function DiscoverScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [searchQuery, selectedCategory]);
 
     const fetchCategories = async () => {
         try {
@@ -56,6 +58,21 @@ export default function DiscoverScreen() {
         setLoading(true);
         fetchEvents();
     }, [searchQuery, selectedCategory]);
+
+    useEffect(() => {
+        if (!token) return;
+
+        const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
+        const socket = io(socketBaseUrl, { auth: { token } });
+
+        socket.on("events:public-updated", () => {
+            fetchEvents();
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [token, fetchEvents]);
 
     const onRefresh = () => {
         setRefreshing(true);

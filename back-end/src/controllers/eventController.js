@@ -1,6 +1,7 @@
 const Event = require('../models/Event');
 const Category = require('../models/Category');
 const Booking = require('../models/Booking');
+const { getIO } = require('../socket');
 
 const attachBannerUrl = (eventDoc, req) => {
     const eventObj = eventDoc.toObject ? eventDoc.toObject() : eventDoc;
@@ -8,6 +9,32 @@ const attachBannerUrl = (eventDoc, req) => {
         eventObj.banner_url = `${req.protocol}://${req.get('host')}/${eventObj.banner_url}`;
     }
     return eventObj;
+};
+
+const emitPublicEventUpdate = (eventDoc, action = 'updated') => {
+    try {
+        const io = getIO();
+        const eventId = eventDoc?._id?.toString?.() || eventDoc?._id;
+        const status = eventDoc?.status;
+
+        io.emit('events:public-updated', {
+            action,
+            eventId,
+            status,
+            updatedAt: new Date().toISOString(),
+        });
+
+        if (eventId) {
+            io.to(`event:${eventId}`).emit('event:details-updated', {
+                action,
+                eventId,
+                status,
+                updatedAt: new Date().toISOString(),
+            });
+        }
+    } catch (error) {
+        console.error('Emit public event update failed:', error.message);
+    }
 };
 
 // Create a new event
@@ -61,6 +88,8 @@ exports.createEvent = async (req, res) => {
         if (savedEventObj.banner_url && !savedEventObj.banner_url.startsWith('http')) {
             savedEventObj.banner_url = `${req.protocol}://${req.get('host')}/${savedEventObj.banner_url}`;
         }
+
+        emitPublicEventUpdate(savedEventObj, 'created');
 
         res.status(201).json(savedEventObj);
     } catch (err) {
@@ -184,6 +213,8 @@ exports.getEventById = async (req, res) => {
         if (eventObj.banner_url && !eventObj.banner_url.startsWith('http')) {
             eventObj.banner_url = `${req.protocol}://${req.get('host')}/${eventObj.banner_url}`;
         }
+
+        emitPublicEventUpdate(eventObj, 'updated');
         res.status(200).json(eventObj);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -305,6 +336,8 @@ exports.deleteEvent = async (req, res) => {
             { $set: { status: 'cancelled' } },
             { new: true }
         );
+
+        emitPublicEventUpdate(cancelledEvent, 'cancelled');
 
         res.status(200).json({ 
             message: 'Event has been cancelled',

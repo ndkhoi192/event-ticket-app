@@ -21,30 +21,43 @@ export default function BookingScreen() {
   const [pendingBookingId, setPendingBookingId] = useState<string>("");
   const [checkoutQrData, setCheckoutQrData] = useState<string>("");
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/events/${eventId}`);
-        setEvent(response.data);
+  const fetchEvent = React.useCallback(async () => {
+    if (!eventId) return;
 
-        const initialQuantities: { [key: string]: number } = {};
-        response.data.ticket_types.forEach((t: TicketType) => {
-          initialQuantities[t.type_name] = 0;
-        });
-        setQuantities(initialQuantities);
-      } catch (error) {
-        console.error("Failed to fetch event", error);
-        Alert.alert("Error", "Could not load event details.");
-        router.back();
-      } finally {
-        setLoading(false);
+    try {
+      const response = await axios.get(`${API_URL}/events/${eventId}`);
+      if (response.data?.status !== "published") {
+        Alert.alert("Unavailable", "This event is no longer available for booking.", [
+          { text: "OK", onPress: () => router.replace("/(attendee)/discover") },
+        ]);
+        return;
       }
-    };
 
-    if (eventId) {
-      fetchEvent();
+      setEvent(response.data);
+
+      const initialQuantities: { [key: string]: number } = {};
+      response.data.ticket_types.forEach((t: TicketType) => {
+        initialQuantities[t.type_name] = 0;
+      });
+      setQuantities(initialQuantities);
+    } catch (error) {
+      console.error("Failed to fetch event", error);
+      Alert.alert("Error", "Could not load event details.");
+      router.back();
     }
   }, [eventId, router]);
+
+  useEffect(() => {
+    if (!eventId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    fetchEvent().finally(() => {
+      setLoading(false);
+    });
+  }, [eventId, fetchEvent]);
 
   useEffect(() => {
     if (!eventId || !token) return;
@@ -90,10 +103,23 @@ export default function BookingScreen() {
       }
     });
 
+    socket.on("event:details-updated", (payload: { eventId?: string; status?: string }) => {
+      if (payload?.eventId !== eventId) return;
+
+      if (payload?.status && payload.status !== "published") {
+        Alert.alert("Unavailable", "This event is no longer available for booking.", [
+          { text: "OK", onPress: () => router.replace("/(attendee)/discover") },
+        ]);
+        return;
+      }
+
+      fetchEvent();
+    });
+
     return () => {
       socket.disconnect();
     };
-  }, [eventId, token, pendingBookingId, router]);
+  }, [eventId, token, pendingBookingId, router, fetchEvent]);
 
   const updateQuantity = (typeName: string, delta: number) => {
     setQuantities((prev) => {

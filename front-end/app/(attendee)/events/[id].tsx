@@ -31,44 +31,73 @@ export default function EventDetailsScreen() {
     const [comment, setComment] = useState<string>("");
     const [hasPurchasedTicket, setHasPurchasedTicket] = useState(false);
 
+    const fetchEventDetails = useCallback(async () => {
+        if (!eventId) return;
+
+        try {
+            const response = await axios.get(`${API_URL}/events/${eventId}`);
+            if (response.data?.status !== "published") {
+                setEvent(null);
+                Alert.alert("Unavailable", "This event is no longer available.", [
+                    { text: "OK", onPress: () => router.replace("/(attendee)/discover") },
+                ]);
+                return;
+            }
+            setEvent(response.data);
+        } catch (error) {
+            console.error("Failed to fetch event details:", error);
+            Alert.alert("Error", "Could not load event details");
+        }
+    }, [eventId, router]);
+
     const fetchReviews = useCallback(async () => {
-        if (!id) {
+        if (!eventId) {
+            setReviews([]);
             return;
         }
         setLoadingReviews(true);
         try {
-            const response = await axios.get(`${API_URL}/reviews/${id}`);
+            const response = await axios.get(`${API_URL}/reviews/${eventId}`);
             setReviews(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error("Failed to load reviews", error);
         } finally {
             setLoadingReviews(false);
         }
-    }, [id]);
+    }, [eventId]);
 
     useEffect(() => {
-        const fetchEventDetails = async () => {
-            try {
-                const response = await axios.get(`${API_URL}/events/${eventId}`);
-                setEvent(response.data);
-            } catch (error) {
-                console.error("Failed to fetch event details:", error);
-                Alert.alert("Error", "Could not load event details");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (eventId) {
-            fetchEventDetails();
-            fetchReviews();
+        if (!eventId) {
+            setEvent(null);
+            setReviews([]);
+            setLoading(false);
+            return;
         }
-    }, [eventId, fetchReviews]);
+
+        let isActive = true;
+        setLoading(true);
+        setEvent(null);
+        setReviews([]);
+
+        fetchEventDetails().finally(() => {
+            if (!isActive) return;
+            setLoading(false);
+        });
+        fetchReviews();
+
+        return () => {
+            isActive = false;
+        };
+    }, [eventId, fetchReviews, fetchEventDetails]);
 
     useEffect(() => {
+        let isActive = true;
+
         const checkPurchasedTicket = async () => {
             if (!eventId || !user) {
-                setHasPurchasedTicket(false);
+                if (isActive) {
+                    setHasPurchasedTicket(false);
+                }
                 return;
             }
 
@@ -82,14 +111,22 @@ export default function EventDetailsScreen() {
                     return ticketEventId === eventId;
                 });
 
-                setHasPurchasedTicket(purchased);
+                if (isActive) {
+                    setHasPurchasedTicket(purchased);
+                }
             } catch (error) {
                 console.error("Failed to check purchased ticket", error);
-                setHasPurchasedTicket(false);
+                if (isActive) {
+                    setHasPurchasedTicket(false);
+                }
             }
         };
 
         checkPurchasedTicket();
+
+        return () => {
+            isActive = false;
+        };
     }, [eventId, user]);
 
     useEffect(() => {
@@ -113,10 +150,24 @@ export default function EventDetailsScreen() {
             });
         });
 
+        socket.on("event:details-updated", (payload: { eventId?: string; status?: string }) => {
+            if (payload?.eventId !== eventId) return;
+
+            if (payload?.status && payload.status !== "published") {
+                Alert.alert("Unavailable", "This event is no longer available.", [
+                    { text: "OK", onPress: () => router.replace("/(attendee)/discover") },
+                ]);
+                return;
+            }
+
+            fetchEventDetails();
+            fetchReviews();
+        });
+
         return () => {
             socket.disconnect();
         };
-    }, [eventId, token]);
+    }, [eventId, token, router, fetchEventDetails, fetchReviews]);
 
     const handleSubmitReview = async () => {
         if (!user) {

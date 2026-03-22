@@ -124,7 +124,8 @@ exports.getSavedEvents = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.json(user.saved_events);
+        const publishedSavedEvents = (user.saved_events || []).filter((event) => event?.status === 'published');
+        res.json(publishedSavedEvents);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

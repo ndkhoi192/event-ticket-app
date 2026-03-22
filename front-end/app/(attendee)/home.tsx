@@ -1,15 +1,16 @@
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { io } from "socket.io-client";
 import FeaturedEvent from "../../components/FeaturedEvent";
 import StandardEventCard from "../../components/StandardEventCard";
 import { API_URL, useAuth } from "../../context/AuthContext";
 import { Event } from "../../types";
 
 export default function AttendeeHomeScreen() {
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const router = useRouter();
     const { width } = useWindowDimensions();
     const [latestEvents, setLatestEvents] = useState<Event[]>([]);
@@ -29,24 +30,39 @@ export default function AttendeeHomeScreen() {
         setShowSearchInput(false);
     };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [latestRes, hotRes] = await Promise.all([
-                    axios.get(`${API_URL}/events/latest?n=5`),
-                    axios.get(`${API_URL}/events/hot?n=5`),
-                ]);
-                setLatestEvents(Array.isArray(latestRes.data) ? latestRes.data : []);
-                setHotEvents(Array.isArray(hotRes.data) ? hotRes.data : []);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
+    const fetchData = useCallback(async () => {
+        try {
+            const [latestRes, hotRes] = await Promise.all([
+                axios.get(`${API_URL}/events/latest?n=5`),
+                axios.get(`${API_URL}/events/hot?n=5`),
+            ]);
+            setLatestEvents(Array.isArray(latestRes.data) ? latestRes.data : []);
+            setHotEvents(Array.isArray(hotRes.data) ? hotRes.data : []);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    useEffect(() => {
+        if (!token) return;
+
+        const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
+        const socket = io(socketBaseUrl, { auth: { token } });
+
+        socket.on("events:public-updated", () => {
+            fetchData();
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [token, fetchData]);
 
     const featuredEvents = latestEvents;
 
