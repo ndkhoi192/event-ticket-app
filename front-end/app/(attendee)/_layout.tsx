@@ -79,12 +79,6 @@ export default function AttendeeLayout() {
                     href: null,
                 }}
             />
-            <Tabs.Screen
-                name="queue/[id]"
-                options={{
-                    href: null,
-                }}
-            />
         </Tabs>
     );
 }

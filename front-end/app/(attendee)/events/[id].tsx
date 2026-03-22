@@ -390,24 +390,6 @@ export default function EventDetailsScreen() {
                 </TouchableOpacity>
             </View>
 
-            <View className="absolute bottom-[86px] w-full px-6">
-                <TouchableOpacity
-                    className="bg-white py-3 rounded-2xl border border-gray-200"
-                    onPress={() => {
-                        if (!user) {
-                            Alert.alert("Login Required", "Please login to join the waiting room.", [
-                                { text: "Cancel", style: "cancel" },
-                                { text: "Login", onPress: () => router.push("/(auth)/login") },
-                            ]);
-                            return;
-                        }
-
-                        router.push({ pathname: "/(attendee)/queue/[id]", params: { id: eventId } });
-                    }}
-                >
-                    <Text className="text-center text-gray-700 font-semibold">Join waiting room</Text>
-                </TouchableOpacity>
-            </View>
         </View>
     );
 }

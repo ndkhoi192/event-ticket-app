@@ -15,7 +15,6 @@ export default function TicketScannerScreen() {
     const [loading, setLoading] = useState(false);
     const [isScanActive, setIsScanActive] = useState(true);
     const [showManualInput, setShowManualInput] = useState(false);
-    const [gateId, setGateId] = useState("Gate A");
     const [fraudBanner, setFraudBanner] = useState<string | null>(null);
 
     const isProcessingRef = useRef(false);
@@ -53,12 +52,6 @@ export default function TicketScannerScreen() {
         const socketBaseUrl = API_URL.replace(/\/api\/?$/, "");
         const socket = io(socketBaseUrl, {
             auth: { token },
-        });
-
-        socket.on("fraud:alert", (payload: { scannedGate?: string; originalGate?: string }) => {
-            const message = `Duplicate scan detected: first at ${payload?.originalGate || "unknown"}, now at ${payload?.scannedGate || "unknown"}.`;
-            setFraudBanner(message);
-            showSingleAlert("Fraud alert", message);
         });
 
         return () => {
@@ -126,12 +119,6 @@ export default function TicketScannerScreen() {
             return;
         }
 
-        if (apiCode === "FRAUD_SUSPECT") {
-            showSingleAlert("Fraud suspect", apiMessage || "Duplicate scan detected.");
-            setFraudBanner(apiMessage || "Duplicate scan detected.");
-            return;
-        }
-
         if (apiCode === "TICKET_EXPIRED") {
             showSingleAlert("Ticket expired", "This ticket is expired.");
             return;
@@ -157,7 +144,6 @@ export default function TicketScannerScreen() {
         try {
             const response = await axios.post(`${API_URL}/tickets/validate`, {
                 qr_code_data: normalizedCode,
-                gate_id: gateId,
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -216,21 +202,6 @@ export default function TicketScannerScreen() {
 
                 <View className="w-24 h-24 bg-pink-50 rounded-full items-center justify-center mb-6">
                     <QrCode size={48} color="#FB96BB" />
-                </View>
-
-                <View className="w-full mb-4">
-                    <Text className="text-gray-700 font-semibold mb-2">Scan Gate</Text>
-                    <View className="flex-row">
-                        {["Gate A", "Gate B", "Gate C"].map((gate) => (
-                            <TouchableOpacity
-                                key={gate}
-                                className={`flex-1 py-2.5 rounded-xl border mr-2 ${gateId === gate ? "bg-pink-50 border-pink-300" : "bg-white border-gray-200"}`}
-                                onPress={() => setGateId(gate)}
-                            >
-                                <Text className={`text-center font-semibold ${gateId === gate ? "text-pink-600" : "text-gray-600"}`}>{gate}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
                 </View>
 
                 <Text className="text-xl font-bold text-gray-800 mb-2">QR Check-in</Text>

@@ -20,9 +20,6 @@ type LiveStatsResponse = {
     ticketsValid: number;
     ticketsExpired: number;
     salesPerMinute?: number;
-    busiestGate?: string | null;
-    busiestGateScansPer5m?: number;
-    gateLoads?: { _id: string; scans: number }[];
     updatedAt: string;
 };
 
@@ -118,8 +115,6 @@ export default function OrganizerLiveStatsScreen() {
                 <StatCard label="Valid Tickets" value={stats?.ticketsValid || 0} />
                 <StatCard label="Expired Tickets" value={stats?.ticketsExpired || 0} />
                 <StatCard label="Sales Speed (tickets/min)" value={stats?.salesPerMinute || 0} />
-                <StatCard label="Most Congested Gate" value={stats?.busiestGate || "-"} />
-                <StatCard label="Gate Scan Load (5m)" value={stats?.busiestGateScansPer5m || 0} />
 
                 <View className="py-4">
                     <Text className="text-center text-xs text-gray-400">

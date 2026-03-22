@@ -6,7 +6,7 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 router.use(protect);
 
 router.get('/', getMyTickets);
-router.post('/validate', authorize('organizer', 'admin'), validateTicket);
+router.post('/validate', authorize('organizer'), validateTicket);
 router.get('/:id', getTicketById);
 
 module.exports = router;

@@ -105,24 +105,6 @@ const buildEventLiveStats = async (eventId) => {
         }
     ]);
 
-    const gateLoads = await Ticket.aggregate([
-        {
-            $match: {
-                event_id: eventObjectId,
-                status: 'used',
-                check_in_at: { $gte: fiveMinutesAgo },
-                check_in_gate: { $nin: [null, ''] },
-            }
-        },
-        {
-            $group: {
-                _id: '$check_in_gate',
-                scans: { $sum: 1 }
-            }
-        },
-        { $sort: { scans: -1 } }
-    ]);
-
     const bookingMap = new Map(bookingStats.map((item) => [item._id, item]));
     const ticketMap = new Map(ticketStatusStats.map((item) => [item._id, item.count]));
 
@@ -139,9 +121,6 @@ const buildEventLiveStats = async (eventId) => {
         ticketsValid: ticketMap.get('valid') || 0,
         ticketsExpired: ticketMap.get('expired') || 0,
         salesPerMinute: Number(((recentSales[0]?.quantity || 0) / 5).toFixed(2)),
-        busiestGate: gateLoads[0]?._id || null,
-        busiestGateScansPer5m: gateLoads[0]?.scans || 0,
-        gateLoads,
         updatedAt: new Date().toISOString(),
     };
 };
