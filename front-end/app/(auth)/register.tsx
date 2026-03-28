@@ -18,21 +18,42 @@ export default function RegisterScreen() {
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [role, setRole] = useState<"attendee" | "organizer">("attendee");
 
     const { register } = useAuth();
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+
     const handleRegister = async () => {
-        if (!fullName || !email || !password) {
+        const normalizedFullName = fullName.trim();
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!normalizedFullName || !normalizedEmail || !password || !confirmPassword) {
             Alert.alert("Error", "Please fill in all fields");
+            return;
+        }
+
+        if (!isValidEmail(normalizedEmail)) {
+            Alert.alert("Error", "Please enter a valid email address");
+            return;
+        }
+
+        if (password.length < 6) {
+            Alert.alert("Error", "Password must be at least 6 characters");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            Alert.alert("Error", "Confirm password does not match");
             return;
         }
 
         setIsSubmitting(true);
         try {
-            await register(fullName, email, password, role);
+            await register(normalizedFullName, normalizedEmail, password, role);
             if (role === 'organizer') {
                 router.replace("/(organizer)/dashboard");
             } else {
@@ -110,6 +131,18 @@ export default function RegisterScreen() {
                             placeholderTextColor="#FB96BB"
                             value={password}
                             onChangeText={setPassword}
+                            secureTextEntry
+                        />
+                    </View>
+
+                    <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3 bg-gray-50 focus:border-pastel-pink mb-3">
+                        <Lock color="#FB96BB" size={20} />
+                        <TextInput
+                            className="flex-1 ml-3 text-gray-700"
+                            placeholder="Confirm Password"
+                            placeholderTextColor="#FB96BB"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
                             secureTextEntry
                         />
                     </View>

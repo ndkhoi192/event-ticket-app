@@ -6,7 +6,6 @@ import { Platform } from "react-native";
 
 const getApiUrl = () => {
     let url = process.env.EXPO_PUBLIC_API_URL || "https://event-ticket-app-y706.onrender.com/api";
-    console.log("Initial API URL:", url);
 
     // Handle localhost on Native platforms without hard-coding a LAN IP.
     if (Platform.OS !== "web" && /(localhost|127\.0\.0\.1)/.test(url)) {
@@ -25,7 +24,6 @@ const getApiUrl = () => {
     }
 
     url = url.replace(/\/+$/, "");
-    console.log("Resolved API URL:", url);
     return url;
 };
 
@@ -45,7 +43,7 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<User | undefined>;
+    login: (email: string, password: string) => Promise<User>;
     register: (
         full_name: string,
         email: string,
@@ -150,14 +148,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const login = async (email: string, password: string) => {
         try {
-            console.log("Logging in to:", `${API_URL}/auth/login`);
             const response = await axios.post(`${API_URL}/auth/login`, {
                 email,
                 password,
             });
 
             const { token, ...userData } = response.data;
-            console.log("User data received:", userData);
 
             setToken(token);
             setUser(userData);
@@ -179,7 +175,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         role: "attendee" | "organizer"
     ) => {
         try {
-            console.log("Registering to:", `${API_URL}/auth/register`);
             const response = await axios.post(`${API_URL}/auth/register`, {
                 full_name,
                 email,

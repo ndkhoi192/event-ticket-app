@@ -50,6 +50,11 @@ export default function ChangePasswordScreen() {
             return;
         }
 
+        if (currentPassword === newPassword) {
+            Alert.alert("Error", "New password must be different from current password.");
+            return;
+        }
+
         setLoading(true);
         try {
             await axios.put(

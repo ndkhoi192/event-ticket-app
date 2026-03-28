@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const { initSocket } = require('./socket');
+const { startEventStatusScheduler } = require('./jobs/eventStatusScheduler');
 dotenv.config();
 
 
@@ -56,6 +57,7 @@ const PORT = process.env.PORT || 5000;
 connectDB()
     .then(() => {
         initSocket(httpServer);
+        startEventStatusScheduler();
 
         httpServer.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);

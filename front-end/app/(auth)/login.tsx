@@ -21,42 +21,39 @@ export default function LoginScreen() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+
     const handleLogin = async () => {
-        if (!email || !password) {
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!normalizedEmail || !password) {
             Alert.alert("Error", "Please fill in all fields");
+            return;
+        }
+
+        if (!isValidEmail(normalizedEmail)) {
+            Alert.alert("Error", "Please enter a valid email address");
             return;
         }
 
         setIsSubmitting(true);
         try {
-            console.log("Attempting login with:", email);
-            // login needs to return the user OR we need to fetch it
-            // I am updating AuthContext to return the user data from login function
-            // But since I cannot edit AuthContext and LoginScreen atomically in one 'write_to_file',
-            // I will assume AuthContext will be updated to return the user.
-            // IF NOT, I will have to rely on 'user' from useAuth, but that might be stale here.
-            // Let's rely on the result of the promise if I change AuthContext.
-            // Actually, I'll update LoginScreen to expect the user object returned from login().
+            const user = await login(normalizedEmail, password);
 
-            const user = await login(email, password);
-            console.log("Login successful, user:", user);
-
-            if (user) {
-                if (user.role === 'organizer') {
-                    router.replace("/(organizer)/dashboard");
-                } else if (user.role === 'admin') {
-                    router.replace("/(admin)/admin-overview");
-                } else {
-                    router.replace("/(attendee)/home");
-                }
+            if (user.role === "organizer") {
+                router.replace("/(organizer)/dashboard");
+            } else if (user.role === "admin") {
+                router.replace("/(admin)/admin-overview");
             } else {
-                // Fallback if login didn't return user but didn't throw (shouldn't happen with current logic)
                 router.replace("/(attendee)/home");
             }
-
         } catch (error: any) {
-            console.error("Login error details:", error);
-            Alert.alert("Login Failed", error.response?.data?.message || error.message || "Something went wrong");
+            const apiMessage = error?.response?.data?.message;
+            if (apiMessage === "Invalid credentials") {
+                Alert.alert("Login Failed", "Incorrect email or password");
+            } else {
+                Alert.alert("Login Failed", apiMessage || error?.message || "Something went wrong");
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -102,6 +99,14 @@ export default function LoginScreen() {
                         />
                     </View>
 
+                    <View className="items-end mt-2">
+                        <Link href="/(auth)/forgot-password" asChild>
+                            <TouchableOpacity>
+                                <Text className="text-pastel-blue font-semibold">Forgot password?</Text>
+                            </TouchableOpacity>
+                        </Link>
+                    </View>
+
                     <TouchableOpacity
                         className="bg-pastel-blue rounded-full py-4 items-center shadow-md active:opacity-90 mt-4"
                         onPress={handleLogin}
@@ -115,8 +120,8 @@ export default function LoginScreen() {
                     </TouchableOpacity>
 
                     <View className="flex-row justify-center mt-6">
-                        <Text className="text-gray-500">Don't have an account? </Text>
-                        <Link href="/register" asChild>
+                        <Text className="text-gray-500">Don&apos;t have an account? </Text>
+                        <Link href="/(auth)/register" asChild>
                             <TouchableOpacity>
                                 <Text className="text-pastel-pink font-bold">Sign Up</Text>
                             </TouchableOpacity>
